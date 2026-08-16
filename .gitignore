@@ -3,5 +3,6 @@
 /.build*/
 /.swiftpm/
 /dist/
+/outputs/
 *.epub
 .DS_Store
