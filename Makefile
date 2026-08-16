@@ -1,17 +1,30 @@
-.PHONY: build test fmt vet clean
+.PHONY: resolve build app test format lint clean
+
+SCRATCH_PATH ?= /private/tmp/epubzip-build-$(shell id -u)
+SWIFT_ENV = CLANG_MODULE_CACHE_PATH=$(SCRATCH_PATH)/clang-module-cache SWIFTPM_MODULECACHE_OVERRIDE=$(SCRATCH_PATH)/swift-module-cache
+SWIFT_PATHS = --disable-sandbox --scratch-path $(SCRATCH_PATH) --cache-path $(SCRATCH_PATH)/package-cache --config-path $(SCRATCH_PATH)/config --security-path $(SCRATCH_PATH)/security
+
+resolve:
+	$(SWIFT_ENV) swift package $(SWIFT_PATHS) resolve
 
 build:
-	mkdir -p bin
-	go build -trimpath -ldflags="-s -w" -o bin/epubzip ./cmd/epubzip
+	$(SWIFT_ENV) swift build $(SWIFT_PATHS) -c release --product epubzip
+	@bin_dir=$$($(SWIFT_ENV) swift build $(SWIFT_PATHS) -c release --show-bin-path); \
+		mkdir -p dist; \
+		cp "$$bin_dir/epubzip" dist/epubzip; \
+		echo "$(CURDIR)/dist/epubzip"
+
+app:
+	SCRATCH_PATH=$(SCRATCH_PATH) ARCHS="$(ARCHS)" ./Scripts/build-app.sh
 
 test:
-	go test -race ./...
+	$(SWIFT_ENV) swift test $(SWIFT_PATHS)
 
-fmt:
-	go fmt ./...
+format:
+	swift format -i -r Package.swift Sources Tests
 
-vet:
-	go vet ./...
+lint:
+	swift format lint -r Package.swift Sources Tests
 
 clean:
-	rm -rf bin
+	rm -rf $(SCRATCH_PATH) dist

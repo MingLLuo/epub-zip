@@ -1,41 +1,79 @@
-# epubzip
+# EPUB Zip
 
-`epubzip` 是一个安全、可移植、可复现的 EPUB 打包与解包工具，也是经典 macOS 工具 **ePub Zip-Unzip 64 3.0** 的现代开源替代品。
+一个面向 Apple Silicon 的原生 macOS EPUB 打包与解包工具，也是经典 **ePub Zip-Unzip 64 3.0** 的现代开源替代品。
 
-它直接使用 Go 标准库读写 ZIP，不拼接 Shell 命令。生成的 EPUB 会把 `mimetype` 放在第一个 ZIP 条目中，以 Store 模式保存且不带额外字段，符合 EPUB Open Container Format（OCF）的关键要求。
+把 EPUB 或源目录拖进窗口即可：
 
-## 功能
+- 拖入目录 → 创建符合 OCF 规则的 `.epub`
+- 拖入 `.epub` → 创建可编辑目录
+- 自动检查 `mimetype`、`META-INF/container.xml` 和 OPF rootfile
 
-- 将标准 EPUB 源目录打包为 `.epub`
-- 安全地将 `.epub` 解包为目录
-- 检查 `mimetype`、ZIP 方法、`container.xml` 和 OPF rootfile
-- 防止 Zip Slip、符号链接、大小炸弹和大小写文件名碰撞
-- 通过临时路径和原子替换避免半成品
-- 固定条目顺序与时间元数据，支持可重复构建
-- macOS、Linux 和 Windows 使用同一套核心代码
+项目使用 Swift 6、SwiftUI 和 [ZIPFoundation](https://github.com/weichsel/ZIPFoundation)。不调用 Shell、Finder Automation、`zip` 或 `unzip`。
 
-> `check` 是容器级检查器，不替代完整的 [EPUBCheck](https://www.w3.org/publishing/epubcheck/)。
+## 为什么另做一个项目
 
-## 安装
+调研过的开源项目各自解决了部分问题：ZIPFoundation 提供可靠的 Swift ZIP 基础；Honeycrisp 展示了原生 EPUB 拖放界面；EPUBCheck 提供完整标准校验。但没有一个轻量项目同时提供 Apple Silicon 原生拖放、EPUB 合规打包和安全解包。
 
-需要 Go 1.22 或更高版本：
+完整调研与决策见 [`docs/adr/0001-apple-silicon-native-swift.md`](docs/adr/0001-apple-silicon-native-swift.md)。
+
+## 特性
+
+- 原生 `arm64` macOS 应用，最低支持 macOS 13
+- 单窗口拖放操作，也支持从 Finder 打开 EPUB/目录
+- `mimetype` 始终为第一个 ZIP 条目、Store 模式、无额外字段
+- 拒绝 Zip Slip、符号链接、重复条目和大小写冲突
+- 文件数、单文件大小、总大小和压缩比限制
+- 先写临时路径，检查成功后才提交输出
+- 同名输出自动生成为 `book 2.epub`，不静默覆盖
+- 固定 ZIP 条目顺序和时间，支持可重复构建
+- 自带使用同一核心的 `epubzip` CLI
+- MIT 许可
+
+> 内置 `check` 只覆盖 ZIP/OCF 容器边界。出版级检查请继续使用 [EPUBCheck](https://github.com/w3c/epubcheck)。
+
+## 构建原生应用
+
+需要 Xcode 15 或更高版本。默认只构建 Apple Silicon：
 
 ```bash
-go install ./cmd/epubzip
+make app
 ```
 
-或者在仓库中构建：
+产物位于：
+
+```text
+dist/EPUB Zip-0.1.0-arm64.zip
+```
+
+构建通用版本是可选项：
+
+```bash
+ARCHS="arm64 x86_64" make app
+```
+
+## CLI
 
 ```bash
 make build
-./bin/epubzip version
+
+./dist/epubzip pack book/
+./dist/epubzip unpack book.epub
+./dist/epubzip unpack --package book.epub
+./dist/epubzip check book.epub
 ```
 
-## 使用
+也可省略子命令：
 
-### 打包
+```bash
+./dist/epubzip book/       # 打包
+./dist/epubzip book.epub   # 解包
+```
 
-源目录至少需要包含：
+CLI 默认拒绝覆盖。确定需要替换时传入 `--force`；图形应用始终采用自动避让命名。
+
+## EPUB 源目录
+
+最小结构：
 
 ```text
 book/
@@ -46,67 +84,26 @@ book/
     └── book.opf
 ```
 
-然后执行：
-
-```bash
-epubzip pack book
-epubzip pack -o release/book.epub book
-```
-
-### 解包
-
-```bash
-epubzip unpack book.epub
-epubzip unpack --package book.epub
-```
-
-`--package` 会生成 `book_pkg.epub` 目录，用于模拟旧工具的 iBooks Package 模式。它仍然是目录，不是压缩后的 EPUB。
-
-默认安全限制为 20,000 个条目、单文件 512 MiB、总计 2 GiB、最大压缩比 1000:1。可通过 `unpack` 参数收紧前三项限制。
-
-### 检查
-
-```bash
-epubzip check book.epub
-epubzip check --json book.epub
-```
-
-### 自动判断
-
-和旧工具的拖放分派方式类似：目录会被打包，`.epub` 文件会被解包。
-
-```bash
-epubzip book/
-epubzip book.epub
-epubzip auto first.epub second.epub
-```
-
-所有命令默认拒绝覆盖已有输出。确认需要替换时显式传入 `--force`。
-
-## 与旧工具的区别
-
-| 方面 | ePub Zip-Unzip 64 3.0 | epubzip |
-|---|---|---|
-| 实现 | AppleScript + Shell 命令 | Go 标准库 |
-| 平台 | Intel macOS | macOS / Linux / Windows |
-| 路径处理 | Shell 字符串拼接 | 结构化文件 API |
-| 解包权限 | 所有文件 `755` | 目录 `755`、文件 `644` |
-| Zip Slip 防护 | 依赖系统 `unzip` | 内置检查 |
-| 资源限制 | 无 | 文件数、大小、压缩比限制 |
-| EPUB 检查 | 无 | OCF 容器级检查 |
-| 错误恢复 | 可能留下部分输出 | 临时输出成功后再提交 |
-
-旧工具会先执行 `zip -FF` 尝试修复损坏的 ZIP。`epubzip` 当前刻意不自动修复输入，因为“静默修复”可能改变证据或掩盖损坏；它会明确报错。
+`mimetype` 内容必须精确为 `application/epub+zip`，不能带换行。
 
 ## 开发
 
 ```bash
-make fmt
+make format
 make test
 make build
+make app
 ```
 
-架构和安全边界见 [`docs/architecture.md`](docs/architecture.md)，贡献方式见 [`CONTRIBUTING.md`](CONTRIBUTING.md)。
+项目保持三个清晰目标：
+
+```text
+EPUBZipCore   EPUB/OCF 规则与安全文件操作
+epubzip       自动化命令行入口
+EPUBZipApp    SwiftUI 单窗口拖放应用
+```
+
+架构说明见 [`docs/architecture.md`](docs/architecture.md)，贡献指南见 [`CONTRIBUTING.md`](CONTRIBUTING.md)，安全策略见 [`SECURITY.md`](SECURITY.md)。
 
 ## 许可证
 

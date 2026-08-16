@@ -1,4 +1,7 @@
 /bin/
 /work/
+/.build*/
+/.swiftpm/
+/dist/
 *.epub
 .DS_Store
