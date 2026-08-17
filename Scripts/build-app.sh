@@ -12,8 +12,8 @@ scratch_dir=${SCRATCH_PATH:-/private/tmp/epubzip-build-$UID}
 output_dir="$project_dir/dist"
 stage_root="$scratch_dir/app-stage"
 app_dir="$stage_root/EPUB Zip.app"
-archive_name="EPUB Zip-0.1.0-${(j:-:)architectures}.zip"
-dmg_name="EPUB Zip-0.1.0-${(j:-:)architectures}.dmg"
+archive_name="EPUB Zip-0.2.0-${(j:-:)architectures}.zip"
+dmg_name="EPUB Zip-0.2.0-${(j:-:)architectures}.dmg"
 
 rm -rf "$stage_root"
 

@@ -1,5 +1,22 @@
-EPUB Zip CLI 0.1.0 (Apple Silicon)
+EPUB Zip CLI 0.2.0 (Apple Silicon)
 =================================
+
+This is a command-line tool, not a graphical application that can be opened by
+double-clicking. Open Terminal, change to this folder, and run:
+
+  ./epubzip --help
+  ./epubzip pack /path/to/book-folder
+  ./epubzip unpack /path/to/book.epub
+  ./epubzip check /path/to/book.epub
+
+If Terminal reports that the file is not executable, run:
+
+  chmod +x ./epubzip
+
+For a graphical interface, download and open the EPUB Zip .dmg file.
+
+中文说明
+--------
 
 这是命令行工具，不是可双击打开的图形应用。
 

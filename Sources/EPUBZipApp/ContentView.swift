@@ -26,7 +26,7 @@ struct ContentView: View {
     VStack(spacing: 6) {
       Text("EPUB Zip")
         .font(.system(size: 28, weight: .semibold, design: .rounded))
-      Text("目录打包 · EPUB 解包 · 自动检查")
+      Text(appText("Folder to EPUB · EPUB to folder · Validation", zhHans: "目录打包 · EPUB 解包 · 自动检查"))
         .foregroundStyle(.secondary)
     }
   }
@@ -103,13 +103,17 @@ struct ContentView: View {
   private var stateTitle: some View {
     switch model.state {
     case .idle:
-      Text("拖入 EPUB 或源目录")
+      Text(appText("Drop an EPUB or source folder", zhHans: "拖入 EPUB 或源目录"))
     case .working(let name):
-      Text("正在处理 \(name)")
+      Text(appText("Processing \(name)", zhHans: "正在处理 \(name)"))
     case .success(let result):
-      Text(result.kind == .pack ? "EPUB 已创建" : "EPUB 已解包")
+      Text(
+        result.kind == .pack
+          ? appText("EPUB created", zhHans: "EPUB 已创建")
+          : appText("EPUB extracted", zhHans: "EPUB 已解包")
+      )
     case .failure:
-      Text("没有完成")
+      Text(appText("Could not complete", zhHans: "没有完成"))
     }
   }
 
@@ -117,9 +121,19 @@ struct ContentView: View {
   private var stateDetail: some View {
     switch model.state {
     case .idle:
-      Text("拖入目录会生成 EPUB；拖入 .epub 会生成可编辑目录。已有同名结果不会被覆盖。")
+      Text(
+        appText(
+          "Drop a folder to create an EPUB, or drop an .epub to create an editable folder. Existing results are never overwritten.",
+          zhHans: "拖入目录会生成 EPUB；拖入 .epub 会生成可编辑目录。已有同名结果不会被覆盖。"
+        )
+      )
     case .working:
-      Text("正在检查结构并安全写入临时位置…")
+      Text(
+        appText(
+          "Validating the structure and writing safely to a temporary location…",
+          zhHans: "正在检查结构并安全写入临时位置…"
+        )
+      )
     case .success(let result):
       Text(result.outputURL.path)
         .textSelection(.enabled)
@@ -133,20 +147,22 @@ struct ContentView: View {
   private var actionButtons: some View {
     switch model.state {
     case .idle:
-      Button("选择文件或目录…") { model.chooseItems() }
-        .buttonStyle(.borderedProminent)
-        .controlSize(.large)
+      Button(appText("Choose File or Folder…", zhHans: "选择文件或目录…")) {
+        model.chooseItems()
+      }
+      .buttonStyle(.borderedProminent)
+      .controlSize(.large)
     case .success:
       HStack {
-        Button("在 Finder 中显示") { model.revealResult() }
+        Button(appText("Show in Finder", zhHans: "在 Finder 中显示")) { model.revealResult() }
           .buttonStyle(.borderedProminent)
-        Button("继续处理") { model.reset() }
+        Button(appText("Process Another", zhHans: "继续处理")) { model.reset() }
       }
     case .failure:
       HStack {
-        Button("重新选择…") { model.chooseItems() }
+        Button(appText("Choose Again…", zhHans: "重新选择…")) { model.chooseItems() }
           .buttonStyle(.borderedProminent)
-        Button("返回") { model.reset() }
+        Button(appText("Back", zhHans: "返回")) { model.reset() }
       }
     case .working:
       EmptyView()
@@ -155,9 +171,9 @@ struct ContentView: View {
 
   private var footer: some View {
     HStack {
-      Label("Apple Silicon 原生", systemImage: "cpu")
+      Label(appText("Native Apple Silicon", zhHans: "Apple Silicon 原生"), systemImage: "cpu")
       Spacer()
-      Text("不会修改输入文件")
+      Text(appText("Input files are never modified", zhHans: "不会修改输入文件"))
     }
     .font(.caption)
     .foregroundStyle(.secondary)

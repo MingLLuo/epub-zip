@@ -2,6 +2,11 @@
 
 All notable changes to EPUB Zip are documented here.
 
+## 0.2.0 — 2026-08-17
+
+- Added automatic English and Simplified Chinese support across the GUI, CLI, and core errors.
+- Added bilingual command-line instructions and an English README.
+
 ## 0.1.0 — 2026-08-17
 
 - Added a native SwiftUI drag-and-drop application for Apple Silicon Macs.

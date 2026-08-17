@@ -4,7 +4,7 @@ import PackageDescription
 
 let package = Package(
   name: "EPUBZip",
-  defaultLocalization: "zh-Hans",
+  defaultLocalization: "en",
   platforms: [
     .macOS(.v13)
   ],

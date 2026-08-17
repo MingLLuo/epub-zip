@@ -10,15 +10,15 @@ resolve:
 build:
 	$(SWIFT_ENV) swift build $(SWIFT_PATHS) -c release --product epubzip
 	@bin_dir=$$($(SWIFT_ENV) swift build $(SWIFT_PATHS) -c release --show-bin-path); \
-		stage="$(SCRATCH_PATH)/epubzip-0.1.0-arm64"; \
+		stage="$(SCRATCH_PATH)/epubzip-0.2.0-arm64"; \
 		rm -rf "$$stage"; \
 		mkdir -p "$$stage" dist; \
 		cp "$$bin_dir/epubzip" "$$stage/epubzip"; \
 		cp Resources/CLI-README.txt "$$stage/README.txt"; \
 		chmod 755 "$$stage/epubzip"; \
-		rm -f "dist/epubzip-0.1.0-arm64-cli.zip"; \
-		ditto -c -k --norsrc --noextattr --noqtn --noacl --keepParent "$$stage" "dist/epubzip-0.1.0-arm64-cli.zip"; \
-		echo "$(CURDIR)/dist/epubzip-0.1.0-arm64-cli.zip"
+		rm -f "dist/epubzip-0.2.0-arm64-cli.zip"; \
+		ditto -c -k --norsrc --noextattr --noqtn --noacl --keepParent "$$stage" "dist/epubzip-0.2.0-arm64-cli.zip"; \
+		echo "$(CURDIR)/dist/epubzip-0.2.0-arm64-cli.zip"
 
 app:
 	SCRATCH_PATH=$(SCRATCH_PATH) ARCHS="$(ARCHS)" ./Scripts/build-app.sh

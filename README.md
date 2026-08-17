@@ -1,5 +1,7 @@
 # EPUB Zip
 
+[English](README.en.md) | 简体中文
+
 一个面向 Apple Silicon 的原生 macOS EPUB 打包与解包工具，也是经典 **ePub Zip-Unzip 64 3.0** 的现代开源替代品。
 
 把 EPUB 或源目录拖进窗口即可：
@@ -27,6 +29,7 @@
 - 同名输出自动生成为 `book 2.epub`，不静默覆盖
 - 固定 ZIP 条目顺序和时间，支持可重复构建
 - 自带使用同一核心的 `epubzip` CLI
+- 英文和简体中文界面，按 macOS 首选语言自动切换
 - MIT 许可
 
 > 内置 `check` 只覆盖 ZIP/OCF 容器边界。出版级检查请继续使用 [EPUBCheck](https://github.com/w3c/epubcheck)。
@@ -42,8 +45,8 @@ make app
 产物位于：
 
 ```text
-dist/EPUB Zip-0.1.0-arm64.dmg
-dist/EPUB Zip-0.1.0-arm64.zip
+dist/EPUB Zip-0.2.0-arm64.dmg
+dist/EPUB Zip-0.2.0-arm64.zip
 ```
 
 普通用户建议下载 `.dmg`：打开镜像，将 `EPUB Zip.app` 拖入 Applications 后运行。无扩展名的 `epubzip` 是终端命令，不能作为图形应用双击。
@@ -59,8 +62,8 @@ ARCHS="arm64 x86_64" make app
 ```bash
 make build
 
-unzip dist/epubzip-0.1.0-arm64-cli.zip
-cd epubzip-0.1.0-arm64
+unzip dist/epubzip-0.2.0-arm64-cli.zip
+cd epubzip-0.2.0-arm64
 ./epubzip pack book/
 ./epubzip unpack book.epub
 ./epubzip unpack --package book.epub

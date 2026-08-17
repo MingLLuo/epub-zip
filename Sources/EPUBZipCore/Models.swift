@@ -1,7 +1,7 @@
 import Foundation
 
 public enum EPUBZipCoreVersion {
-  public static let current = "0.1.0"
+  public static let current = "0.2.0"
 }
 
 public struct ExtractionLimits: Sendable, Equatable {
@@ -96,15 +96,21 @@ public enum EPUBZipError: LocalizedError, Sendable {
   public var errorDescription: String? {
     switch self {
     case .invalidEPUB(let message):
-      "EPUB 无效：\(message)"
+      EPUBZipLocalization.text("Invalid EPUB: \(message)", zhHans: "EPUB 无效：\(message)")
     case .unsupportedInput(let url):
-      "请选择 EPUB 文件或 EPUB 源目录：\(url.lastPathComponent)"
+      EPUBZipLocalization.text(
+        "Choose an EPUB file or EPUB source folder: \(url.lastPathComponent)",
+        zhHans: "请选择 EPUB 文件或 EPUB 源目录：\(url.lastPathComponent)"
+      )
     case .outputExists(let url):
-      "输出已存在：\(url.path)"
+      EPUBZipLocalization.text(
+        "Output already exists: \(url.path)", zhHans: "输出已存在：\(url.path)")
     case .unsafePath(let path):
-      "压缩包包含不安全路径：\(path)"
+      EPUBZipLocalization.text(
+        "The archive contains an unsafe path: \(path)", zhHans: "压缩包包含不安全路径：\(path)")
     case .extractionLimit(let message):
-      "解包已停止：\(message)"
+      EPUBZipLocalization.text(
+        "Extraction stopped: \(message)", zhHans: "解包已停止：\(message)")
     case .operationFailed(let message):
       message
     }

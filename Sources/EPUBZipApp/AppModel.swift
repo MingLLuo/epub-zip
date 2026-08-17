@@ -22,8 +22,11 @@ final class AppModel: ObservableObject {
 
   func chooseItems() {
     let panel = NSOpenPanel()
-    panel.message = "选择 EPUB 文件或包含 EPUB 源文件的目录"
-    panel.prompt = "处理"
+    panel.message = appText(
+      "Choose an EPUB file or a folder containing EPUB source files",
+      zhHans: "选择 EPUB 文件或包含 EPUB 源文件的目录"
+    )
+    panel.prompt = appText("Process", zhHans: "处理")
     panel.canChooseFiles = true
     panel.canChooseDirectories = true
     panel.allowsMultipleSelection = true
@@ -35,7 +38,11 @@ final class AppModel: ObservableObject {
   func process(_ urls: [URL]) {
     guard !urls.isEmpty, !isWorking else { return }
     let packageDirectory = UserDefaults.standard.bool(forKey: "packageDirectory")
-    state = .working(urls.count == 1 ? urls[0].lastPathComponent : "正在处理 \(urls.count) 个项目")
+    state = .working(
+      urls.count == 1
+        ? urls[0].lastPathComponent
+        : appText("\(urls.count) items", zhHans: "正在处理 \(urls.count) 个项目")
+    )
     Task {
       do {
         var latest: OperationResult?

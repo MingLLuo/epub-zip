@@ -44,10 +44,20 @@ public struct EPUBService: Sendable {
       throw EPUBZipError.unsupportedInput(source)
     }
     guard requested.pathExtension.caseInsensitiveCompare("epub") == .orderedSame else {
-      throw EPUBZipError.operationFailed("输出文件必须使用 .epub 扩展名")
+      throw EPUBZipError.operationFailed(
+        EPUBZipLocalization.text(
+          "The output file must use the .epub extension",
+          zhHans: "输出文件必须使用 .epub 扩展名"
+        )
+      )
     }
     guard !requested.isContained(in: source) else {
-      throw EPUBZipError.operationFailed("输出不能位于要打包的源目录内")
+      throw EPUBZipError.operationFailed(
+        EPUBZipLocalization.text(
+          "The output cannot be inside the source folder being packed",
+          zhHans: "输出不能位于要打包的源目录内"
+        )
+      )
     }
 
     let files = try collectFiles(in: source)
@@ -70,7 +80,12 @@ public struct EPUBService: Sendable {
         try add(file, to: archive, stored: file.path == "mimetype")
       }
     } catch {
-      throw EPUBZipError.operationFailed("创建 EPUB 失败：\(error.localizedDescription)")
+      throw EPUBZipError.operationFailed(
+        EPUBZipLocalization.text(
+          "Could not create EPUB: \(error.localizedDescription)",
+          zhHans: "创建 EPUB 失败：\(error.localizedDescription)"
+        )
+      )
     }
 
     let report = try inspector.inspect(temporary)
@@ -134,7 +149,10 @@ public struct EPUBService: Sendable {
           fileManager.createFile(
             atPath: target.path, contents: nil, attributes: [.posixPermissions: 0o644])
         else {
-          throw EPUBZipError.operationFailed("无法创建 \(target.path)")
+          throw EPUBZipError.operationFailed(
+            EPUBZipLocalization.text(
+              "Could not create \(target.path)", zhHans: "无法创建 \(target.path)")
+          )
         }
         let handle = try FileHandle(forWritingTo: target)
         var fileBytes: UInt64 = 0
@@ -145,7 +163,12 @@ public struct EPUBService: Sendable {
             guard fileBytes <= limits.maximumFileSize,
               extractedTotal <= limits.maximumTotalSize
             else {
-              throw EPUBZipError.extractionLimit("实际解压大小超过限制")
+              throw EPUBZipError.extractionLimit(
+                EPUBZipLocalization.text(
+                  "Actual extracted size exceeds the limit",
+                  zhHans: "实际解压大小超过限制"
+                )
+              )
             }
             try handle.write(contentsOf: chunk)
           }
@@ -155,7 +178,12 @@ public struct EPUBService: Sendable {
           throw error
         }
         guard fileBytes == entry.uncompressedSize else {
-          throw EPUBZipError.invalidEPUB("\(entry.path) 的实际大小与 ZIP 头不一致")
+          throw EPUBZipError.invalidEPUB(
+            EPUBZipLocalization.text(
+              "The actual size of \(entry.path) does not match its ZIP header",
+              zhHans: "\(entry.path) 的实际大小与 ZIP 头不一致"
+            )
+          )
         }
       }
     }
@@ -216,18 +244,31 @@ extension EPUBService {
         errorHandler: { _, _ in false }
       )
     else {
-      throw EPUBZipError.operationFailed("无法读取源目录：\(root.path)")
+      throw EPUBZipError.operationFailed(
+        EPUBZipLocalization.text(
+          "Could not read source folder: \(root.path)", zhHans: "无法读取源目录：\(root.path)")
+      )
     }
     var files: [SourceFile] = []
     while let item = enumerator.nextObject() as? URL {
       let values = try item.resourceValues(forKeys: Set(keys))
       if values.isSymbolicLink == true {
         enumerator.skipDescendants()
-        throw EPUBZipError.operationFailed("源目录包含符号链接：\(item.path)")
+        throw EPUBZipError.operationFailed(
+          EPUBZipLocalization.text(
+            "The source folder contains a symbolic link: \(item.path)",
+            zhHans: "源目录包含符号链接：\(item.path)"
+          )
+        )
       }
       if values.isDirectory == true { continue }
       guard values.isRegularFile == true else {
-        throw EPUBZipError.operationFailed("源目录包含非普通文件：\(item.path)")
+        throw EPUBZipError.operationFailed(
+          EPUBZipLocalization.text(
+            "The source folder contains a non-regular file: \(item.path)",
+            zhHans: "源目录包含非普通文件：\(item.path)"
+          )
+        )
       }
       if item.lastPathComponent == ".DS_Store" { continue }
       let resolvedItem = item.resolvingSymlinksInPath().standardizedFileURL
@@ -236,7 +277,12 @@ extension EPUBService {
       guard itemComponents.count > rootComponents.count,
         Array(itemComponents.prefix(rootComponents.count)) == rootComponents
       else {
-        throw EPUBZipError.operationFailed("文件不在源目录内：\(item.path)")
+        throw EPUBZipError.operationFailed(
+          EPUBZipLocalization.text(
+            "File is outside the source folder: \(item.path)",
+            zhHans: "文件不在源目录内：\(item.path)"
+          )
+        )
       }
       let relative = itemComponents.dropFirst(rootComponents.count).joined(separator: "/")
       try SafeArchivePath.validate(relative)
@@ -248,24 +294,45 @@ extension EPUBService {
   fileprivate func validateSourceDirectory(_ root: URL, files: [SourceFile]) throws {
     let names = Set(files.map(\.path))
     guard names.contains("mimetype") else {
-      throw EPUBZipError.invalidEPUB("根目录缺少 mimetype")
+      throw EPUBZipError.invalidEPUB(
+        EPUBZipLocalization.text(
+          "The root folder is missing mimetype", zhHans: "根目录缺少 mimetype")
+      )
     }
     let mimetype = root.appendingPathComponent("mimetype")
     guard try Data(contentsOf: mimetype) == Data(EPUBInspector.mediaType.utf8) else {
-      throw EPUBZipError.invalidEPUB("mimetype 内容必须精确为 \(EPUBInspector.mediaType)，且不能换行")
+      throw EPUBZipError.invalidEPUB(
+        EPUBZipLocalization.text(
+          "mimetype must contain exactly \(EPUBInspector.mediaType), with no newline",
+          zhHans: "mimetype 内容必须精确为 \(EPUBInspector.mediaType)，且不能换行"
+        )
+      )
     }
     let containerURL = root.appendingPathComponent("META-INF/container.xml")
     guard names.contains("META-INF/container.xml") else {
-      throw EPUBZipError.invalidEPUB("缺少 META-INF/container.xml")
+      throw EPUBZipError.invalidEPUB(
+        EPUBZipLocalization.text(
+          "META-INF/container.xml is missing", zhHans: "缺少 META-INF/container.xml")
+      )
     }
     let rootfiles = try sourceRootfiles(from: Data(contentsOf: containerURL))
     guard !rootfiles.isEmpty else {
-      throw EPUBZipError.invalidEPUB("container.xml 没有声明 OPF rootfile")
+      throw EPUBZipError.invalidEPUB(
+        EPUBZipLocalization.text(
+          "container.xml does not declare an OPF rootfile",
+          zhHans: "container.xml 没有声明 OPF rootfile"
+        )
+      )
     }
     for rootfile in rootfiles {
       try SafeArchivePath.validate(rootfile)
       guard names.contains(rootfile) else {
-        throw EPUBZipError.invalidEPUB("找不到 container.xml 声明的 \(rootfile)")
+        throw EPUBZipError.invalidEPUB(
+          EPUBZipLocalization.text(
+            "The rootfile declared by container.xml was not found: \(rootfile)",
+            zhHans: "找不到 container.xml 声明的 \(rootfile)"
+          )
+        )
       }
     }
   }
@@ -292,7 +359,11 @@ extension EPUBService {
     parser.shouldProcessNamespaces = true
     parser.delegate = delegate
     guard parser.parse() else {
-      throw EPUBZipError.invalidEPUB(delegate.error?.localizedDescription ?? "container.xml 无法解析")
+      throw EPUBZipError.invalidEPUB(
+        delegate.error?.localizedDescription
+          ?? EPUBZipLocalization.text(
+            "container.xml could not be parsed", zhHans: "container.xml 无法解析")
+      )
     }
     return delegate.paths
   }
@@ -315,7 +386,12 @@ extension EPUBService {
 
   fileprivate func preflight(_ entries: [Entry], limits: ExtractionLimits) throws {
     guard entries.count <= limits.maximumEntries else {
-      throw EPUBZipError.extractionLimit("条目数超过 \(limits.maximumEntries)")
+      throw EPUBZipError.extractionLimit(
+        EPUBZipLocalization.text(
+          "Entry count exceeds \(limits.maximumEntries)",
+          zhHans: "条目数超过 \(limits.maximumEntries)"
+        )
+      )
     }
     var total: UInt64 = 0
     var names = Set<String>()
@@ -323,30 +399,56 @@ extension EPUBService {
     for entry in entries {
       try SafeArchivePath.validate(entry.path)
       guard names.insert(entry.path).inserted else {
-        throw EPUBZipError.invalidEPUB("ZIP 条目重复：\(entry.path)")
+        throw EPUBZipError.invalidEPUB(
+          EPUBZipLocalization.text(
+            "Duplicate ZIP entry: \(entry.path)", zhHans: "ZIP 条目重复：\(entry.path)")
+        )
       }
       let folded = entry.path.folding(
         options: [.caseInsensitive], locale: Locale(identifier: "en_US_POSIX"))
       guard foldedNames.insert(folded).inserted else {
-        throw EPUBZipError.invalidEPUB("ZIP 条目在默认 macOS 文件系统上发生大小写冲突")
+        throw EPUBZipError.invalidEPUB(
+          EPUBZipLocalization.text(
+            "ZIP entries have a case-insensitive collision on the default macOS file system",
+            zhHans: "ZIP 条目在默认 macOS 文件系统上发生大小写冲突"
+          )
+        )
       }
       guard entry.type != .symlink else {
         throw EPUBZipError.unsafePath(entry.path)
       }
       guard entry.uncompressedSize <= limits.maximumFileSize else {
-        throw EPUBZipError.extractionLimit("\(entry.path) 超过单文件大小限制")
+        throw EPUBZipError.extractionLimit(
+          EPUBZipLocalization.text(
+            "\(entry.path) exceeds the per-file size limit",
+            zhHans: "\(entry.path) 超过单文件大小限制"
+          )
+        )
       }
       let (newTotal, overflow) = total.addingReportingOverflow(entry.uncompressedSize)
       guard !overflow, newTotal <= limits.maximumTotalSize else {
-        throw EPUBZipError.extractionLimit("总解压大小超过限制")
+        throw EPUBZipError.extractionLimit(
+          EPUBZipLocalization.text(
+            "Total extracted size exceeds the limit", zhHans: "总解压大小超过限制")
+        )
       }
       total = newTotal
       if entry.type == .file, entry.uncompressedSize > 0 {
         guard entry.compressedSize > 0 else {
-          throw EPUBZipError.extractionLimit("\(entry.path) 的压缩大小异常")
+          throw EPUBZipError.extractionLimit(
+            EPUBZipLocalization.text(
+              "\(entry.path) has an invalid compressed size",
+              zhHans: "\(entry.path) 的压缩大小异常"
+            )
+          )
         }
         if entry.uncompressedSize / entry.compressedSize > limits.maximumCompressionRatio {
-          throw EPUBZipError.extractionLimit("\(entry.path) 的压缩比超过限制")
+          throw EPUBZipError.extractionLimit(
+            EPUBZipLocalization.text(
+              "\(entry.path) exceeds the compression-ratio limit",
+              zhHans: "\(entry.path) 的压缩比超过限制"
+            )
+          )
         }
       }
     }
@@ -358,7 +460,12 @@ extension EPUBService {
       limits.maximumTotalSize > 0,
       limits.maximumCompressionRatio > 0
     else {
-      throw EPUBZipError.operationFailed("所有解包限制必须大于零")
+      throw EPUBZipError.operationFailed(
+        EPUBZipLocalization.text(
+          "All extraction limits must be greater than zero",
+          zhHans: "所有解包限制必须大于零"
+        )
+      )
     }
   }
 
@@ -378,7 +485,10 @@ extension EPUBService {
         if !ext.isEmpty { candidate.appendPathExtension(ext) }
         if !fileManager.fileExists(atPath: candidate.path) { return candidate }
       }
-      throw EPUBZipError.operationFailed("无法为输出生成唯一名称")
+      throw EPUBZipError.operationFailed(
+        EPUBZipLocalization.text(
+          "Could not generate a unique output name", zhHans: "无法为输出生成唯一名称")
+      )
     }
   }
 
@@ -388,7 +498,10 @@ extension EPUBService {
     let url = output.deletingLastPathComponent()
       .appendingPathComponent(".epubzip-\(UUID().uuidString)\(suffix)")
     guard fileManager.createFile(atPath: url.path, contents: nil) else {
-      throw EPUBZipError.operationFailed("无法创建临时文件")
+      throw EPUBZipError.operationFailed(
+        EPUBZipLocalization.text(
+          "Could not create a temporary file", zhHans: "无法创建临时文件")
+      )
     }
     try fileManager.removeItem(at: url)
     return url
@@ -434,6 +547,8 @@ extension URL {
 
 extension InspectionReport {
   fileprivate var errorSummary: String {
-    issues.filter { $0.severity == .error }.map(\.message).joined(separator: "；")
+    issues.filter { $0.severity == .error }.map(\.message).joined(
+      separator: EPUBZipLocalization.usesSimplifiedChinese ? "；" : "; "
+    )
   }
 }
