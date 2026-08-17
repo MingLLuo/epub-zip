@@ -13,6 +13,7 @@ output_dir="$project_dir/dist"
 stage_root="$scratch_dir/app-stage"
 app_dir="$stage_root/EPUB Zip.app"
 archive_name="EPUB Zip-0.1.0-${(j:-:)architectures}.zip"
+dmg_name="EPUB Zip-0.1.0-${(j:-:)architectures}.dmg"
 
 rm -rf "$stage_root"
 
@@ -53,4 +54,13 @@ codesign --verify --deep --strict "$app_dir"
 mkdir -p "$output_dir"
 rm -f "$output_dir/$archive_name"
 ditto -c -k --norsrc --noextattr --noqtn --noacl --keepParent "$app_dir" "$output_dir/$archive_name"
+
+dmg_source="$stage_root/dmg"
+mkdir -p "$dmg_source"
+cp -R "$app_dir" "$dmg_source/"
+ln -s /Applications "$dmg_source/Applications"
+rm -f "$output_dir/$dmg_name"
+hdiutil create -quiet -volname "EPUB Zip" -srcfolder "$dmg_source" -ov -format UDZO "$output_dir/$dmg_name"
+
 echo "$output_dir/$archive_name"
+echo "$output_dir/$dmg_name"

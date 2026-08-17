@@ -42,8 +42,11 @@ make app
 产物位于：
 
 ```text
+dist/EPUB Zip-0.1.0-arm64.dmg
 dist/EPUB Zip-0.1.0-arm64.zip
 ```
+
+普通用户建议下载 `.dmg`：打开镜像，将 `EPUB Zip.app` 拖入 Applications 后运行。无扩展名的 `epubzip` 是终端命令，不能作为图形应用双击。
 
 构建通用版本是可选项：
 
@@ -56,10 +59,12 @@ ARCHS="arm64 x86_64" make app
 ```bash
 make build
 
-./dist/epubzip pack book/
-./dist/epubzip unpack book.epub
-./dist/epubzip unpack --package book.epub
-./dist/epubzip check book.epub
+unzip dist/epubzip-0.1.0-arm64-cli.zip
+cd epubzip-0.1.0-arm64
+./epubzip pack book/
+./epubzip unpack book.epub
+./epubzip unpack --package book.epub
+./epubzip check book.epub
 ```
 
 也可省略子命令：

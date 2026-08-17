@@ -10,3 +10,4 @@ All notable changes to EPUB Zip are documented here.
 - Added OCF container inspection and JSON output through the CLI.
 - Added atomic output commits, non-destructive GUI conflict naming, and reproducible archives.
 - Added an `arm64` app packaging script, M1 GitHub Actions CI, seven regression tests, and project documentation.
+- Added a user-friendly DMG and packaged the CLI separately with terminal instructions.
