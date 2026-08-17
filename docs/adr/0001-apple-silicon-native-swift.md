@@ -13,11 +13,11 @@ The initial Go prototype proved the EPUB container rules and security model, but
 
 | Project | Useful part | Why it is not the product base |
 |---|---|---|
-| `weichsel/ZIPFoundation` | Mature MIT-licensed Swift ZIP library based on Apple libcompression; streaming, progress, cancellation, ZIP64 | It is a library, not an EPUB application |
-| `kyrielie/honeycrisp` | Demonstrates a small native SwiftUI EPUB app with drag and drop | It is an opinionated reader and does not pack EPUB source directories |
-| `w3c/epubcheck` | Authoritative full-publication validation | Java runtime and broad validation scope are too heavy for the always-on core |
-| `dino-/epub-tools` | Existing EPUB command-line utilities | Haskell CLI; no native macOS drop target |
-| `ernestofgonzalez/epub-utils` | Lightweight EPUB inspection ideas | Python inspection library; no EPUB-compliant packing GUI |
+| [`weichsel/ZIPFoundation`](https://github.com/weichsel/ZIPFoundation) | Mature MIT-licensed Swift ZIP library based on Apple libcompression; streaming, progress, cancellation, ZIP64 | It is a library, not an EPUB application |
+| [`kyrielie/honeycrisp`](https://github.com/kyrielie/honeycrisp) | Demonstrates a native SwiftUI EPUB app and ZIPFoundation integration | It is an opinionated reader and does not pack EPUB source directories |
+| [`w3c/epubcheck`](https://github.com/w3c/epubcheck) | Authoritative full-publication validation | Java runtime and broad validation scope are too heavy for the always-on core |
+| [`dino/epub-tools`](https://hub.darcs.net/dino/epub-tools) | Existing EPUB command-line utilities | Haskell CLI; no native macOS drop target |
+| [`ernestofgonzalez/epub-utils`](https://github.com/ernestofgonzalez/epub-utils) | Lightweight EPUB inspection and CLI ideas | Python inspection library; no EPUB-compliant packing GUI |
 
 No reviewed project combines a native Apple Silicon drop target with focused EPUB-compliant packing and safe unpacking.
 
@@ -53,3 +53,6 @@ The built-in checker covers ZIP/OCF structure needed for safe pack/unpack. Full 
 - Linux and Windows are no longer first-class GUI targets.
 - CLI portability depends on ZIPFoundation's supported platforms, but macOS arm64 is the tested release target.
 - The Go prototype remains in Git history as an executable specification during the migration, then is removed from the main tree.
+
+Normative specifications and current upstream project links are maintained in
+[`docs/references.md`](../references.md).

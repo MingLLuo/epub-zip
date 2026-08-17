@@ -2,6 +2,7 @@
 set -euo pipefail
 
 project_dir=${0:A:h:h}
+version=$(<"$project_dir/VERSION")
 configuration=${CONFIGURATION:-release}
 architectures=(${ARCHS:-arm64})
 arch_args=()
@@ -12,8 +13,8 @@ scratch_dir=${SCRATCH_PATH:-/private/tmp/epubzip-build-$UID}
 output_dir="$project_dir/dist"
 stage_root="$scratch_dir/app-stage"
 app_dir="$stage_root/EPUB Zip.app"
-archive_name="EPUB Zip-0.2.0-${(j:-:)architectures}.zip"
-dmg_name="EPUB Zip-0.2.0-${(j:-:)architectures}.dmg"
+archive_name="EPUB Zip-$version-${(j:-:)architectures}.zip"
+dmg_name="EPUB Zip-$version-${(j:-:)architectures}.dmg"
 
 rm -rf "$stage_root"
 
@@ -43,6 +44,7 @@ bin_dir=$(swift build \
 
 mkdir -p "$app_dir/Contents/MacOS" "$app_dir/Contents/Resources"
 cp "$project_dir/Resources/Info.plist" "$app_dir/Contents/Info.plist"
+/usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $version" "$app_dir/Contents/Info.plist"
 cp "$bin_dir/EPUBZipApp" "$app_dir/Contents/MacOS/EPUB Zip"
 if [[ -d "$bin_dir/ZIPFoundation_ZIPFoundation.bundle" ]]; then
   cp -R "$bin_dir/ZIPFoundation_ZIPFoundation.bundle" "$app_dir/Contents/Resources/"

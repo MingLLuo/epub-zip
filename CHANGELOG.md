@@ -2,6 +2,15 @@
 
 All notable changes to EPUB Zip are documented here.
 
+## 0.3.0 — 2026-08-17
+
+- Centralized English and Simplified Chinese text in typed core, app, and CLI catalogs.
+- Made language detection deterministic and added localization regression coverage.
+- Fixed containment checks for equivalent macOS paths such as `/tmp` and `/private/tmp`.
+- Added design rationale, normative references, prior-art comparison, a bilingual usage guide, and
+  an executable minimal EPUB 3 example.
+- Centralized release artifact naming around the root `VERSION` file.
+
 ## 0.2.0 — 2026-08-17
 
 - Added automatic English and Simplified Chinese support across the GUI, CLI, and core errors.

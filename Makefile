@@ -1,6 +1,7 @@
-.PHONY: resolve build app test format lint clean
+.PHONY: resolve build app example test format lint clean
 
 SCRATCH_PATH ?= /private/tmp/epubzip-build-$(shell id -u)
+VERSION := $(shell tr -d '[:space:]' < VERSION)
 SWIFT_ENV = CLANG_MODULE_CACHE_PATH=$(SCRATCH_PATH)/clang-module-cache SWIFTPM_MODULECACHE_OVERRIDE=$(SCRATCH_PATH)/swift-module-cache
 SWIFT_PATHS = --disable-sandbox --scratch-path $(SCRATCH_PATH) --cache-path $(SCRATCH_PATH)/package-cache --config-path $(SCRATCH_PATH)/config --security-path $(SCRATCH_PATH)/security
 
@@ -10,18 +11,24 @@ resolve:
 build:
 	$(SWIFT_ENV) swift build $(SWIFT_PATHS) -c release --product epubzip
 	@bin_dir=$$($(SWIFT_ENV) swift build $(SWIFT_PATHS) -c release --show-bin-path); \
-		stage="$(SCRATCH_PATH)/epubzip-0.2.0-arm64"; \
+		stage="$(SCRATCH_PATH)/epubzip-$(VERSION)-arm64"; \
+		test "$$($$bin_dir/epubzip --version)" = "epubzip $(VERSION)"; \
 		rm -rf "$$stage"; \
 		mkdir -p "$$stage" dist; \
 		cp "$$bin_dir/epubzip" "$$stage/epubzip"; \
 		cp Resources/CLI-README.txt "$$stage/README.txt"; \
 		chmod 755 "$$stage/epubzip"; \
-		rm -f "dist/epubzip-0.2.0-arm64-cli.zip"; \
-		ditto -c -k --norsrc --noextattr --noqtn --noacl --keepParent "$$stage" "dist/epubzip-0.2.0-arm64-cli.zip"; \
-		echo "$(CURDIR)/dist/epubzip-0.2.0-arm64-cli.zip"
+		rm -f "dist/epubzip-$(VERSION)-arm64-cli.zip"; \
+		ditto -c -k --norsrc --noextattr --noqtn --noacl --keepParent "$$stage" "dist/epubzip-$(VERSION)-arm64-cli.zip"; \
+		echo "$(CURDIR)/dist/epubzip-$(VERSION)-arm64-cli.zip"
 
 app:
 	SCRATCH_PATH=$(SCRATCH_PATH) ARCHS="$(ARCHS)" ./Scripts/build-app.sh
+
+example:
+	mkdir -p dist
+	$(SWIFT_ENV) swift run $(SWIFT_PATHS) epubzip pack --force -o "$(CURDIR)/dist/MinimalBook.epub" "$(CURDIR)/Examples/MinimalBook"
+	$(SWIFT_ENV) swift run $(SWIFT_PATHS) epubzip check "$(CURDIR)/dist/MinimalBook.epub"
 
 test:
 	$(SWIFT_ENV) swift test $(SWIFT_PATHS)

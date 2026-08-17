@@ -12,6 +12,18 @@ epubzip CLI ─────────┘
 
 The GUI and CLI contain no archive logic.
 
+Human-readable text is also separated from behavior:
+
+```text
+LocalizedMessage + language resolver
+  ├── CoreStrings   validation and filesystem errors
+  ├── AppStrings    SwiftUI labels and prompts
+  └── CLIStrings    terminal output and usage
+```
+
+JSON issue `code` values are language-neutral and stable; only their human-readable `message`
+changes with the selected language.
+
 ## Pack pipeline
 
 ```text
@@ -41,11 +53,17 @@ EPUB file
 
 Archive permissions are not trusted. Extracted directories use `0755`; regular files use `0644`. Symbolic links and non-normalized paths are rejected.
 
+Containment comparison resolves the nearest existing ancestor before comparing path components.
+This handles equivalent macOS aliases such as `/tmp` and `/private/tmp`, including destinations
+whose final component does not exist yet.
+
 ## Native app
 
 The SwiftUI application has one primary drop zone. It uses `Task.detached` to keep archive work off the main actor, then publishes only the final result. GUI conflicts use `.uniquify`; a previous output is never silently replaced.
 
-The release script builds `arm64` by default, creates a conventional `.app` bundle, ad-hoc signs it for local verification, and packages it as a ZIP. Universal `arm64 x86_64` output is optional.
+The release script builds `arm64` by default, creates a conventional `.app` bundle, ad-hoc signs it
+for local verification, and packages it as a DMG and ZIP. The DMG is the user-facing artifact;
+universal `arm64 x86_64` output is optional.
 
 ## Validation boundary
 
@@ -67,3 +85,11 @@ It does not validate package metadata, manifests, spines, navigation documents, 
 - conversion between EPUB, PDF, MOBI, KFX, or other formats
 - preserving ownership, ACLs, executable bits, or extended attributes
 - managing an ebook library
+
+## Further reading
+
+- [Design rationale](design-rationale.md)
+- [References and prior art](references.md)
+- [Usage guide](usage.md)
+- [ADR 0001](adr/0001-apple-silicon-native-swift.md)
+- [ADR 0002](adr/0002-typed-localization-catalogs.md)

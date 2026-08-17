@@ -1,5 +1,5 @@
-EPUB Zip CLI 0.2.0 (Apple Silicon)
-=================================
+EPUB Zip CLI (Apple Silicon)
+============================
 
 This is a command-line tool, not a graphical application that can be opened by
 double-clicking. Open Terminal, change to this folder, and run:
