@@ -12,11 +12,7 @@ public struct EPUBInspector: Sendable {
       archive = try Archive(url: url, accessMode: .read)
     } catch {
       throw EPUBZipError.invalidEPUB(
-        EPUBZipLocalization.text(
-          "Could not read ZIP container: \(error.localizedDescription)",
-          zhHans: "无法读取 ZIP 容器：\(error.localizedDescription)"
-        )
-      )
+        CoreStrings.readZIPFailed(error.localizedDescription).localized)
     }
 
     let entries = Array(archive)
@@ -28,42 +24,25 @@ public struct EPUBInspector: Sendable {
     }
 
     if entries.isEmpty {
-      add(
-        .error, "empty",
-        EPUBZipLocalization.text(
-          "The ZIP container has no entries", zhHans: "ZIP 容器没有条目"))
+      add(.error, "empty", CoreStrings.emptyZIP.localized)
       return InspectionReport(path: url.path, entryCount: 0, rootfiles: [], issues: issues)
     }
 
     do {
       let first = try ZIPStructure.firstLocalHeader(at: url)
       if first.name != "mimetype" {
-        add(
-          .error, "mimetype-order",
-          EPUBZipLocalization.text(
-            "mimetype must be the first ZIP entry", zhHans: "mimetype 必须是第一个 ZIP 条目"))
+        add(.error, "mimetype-order", CoreStrings.mimetypeOrder.localized)
       }
       if first.compressionMethod != 0 {
-        add(
-          .error, "mimetype-compression",
-          EPUBZipLocalization.text(
-            "mimetype must be stored without compression", zhHans: "mimetype 必须以 Store 模式保存"))
+        add(.error, "mimetype-compression", CoreStrings.mimetypeStored.localized)
       }
       if first.extraFieldLength != 0 {
-        add(
-          .error, "mimetype-extra",
-          EPUBZipLocalization.text(
-            "The mimetype ZIP header must not contain an extra field",
-            zhHans: "mimetype 的 ZIP 头不能包含额外字段"
-          ))
+        add(.error, "mimetype-extra", CoreStrings.mimetypeExtraField.localized)
       }
     } catch {
       add(
         .error, "zip-header",
-        EPUBZipLocalization.text(
-          "Could not read the first ZIP local header: \(error.localizedDescription)",
-          zhHans: "无法读取首个 ZIP 本地头：\(error.localizedDescription)"
-        ))
+        CoreStrings.firstZIPHeaderFailed(error.localizedDescription).localized)
     }
 
     if let declaredCount = try ZIPStructure.classicEntryCount(at: url),
@@ -72,10 +51,7 @@ public struct EPUBInspector: Sendable {
       add(
         .error,
         "entry-count",
-        EPUBZipLocalization.text(
-          "The ZIP central directory declares \(declaredCount) entries, but only \(entries.count) can be read safely",
-          zhHans: "ZIP 中央目录声明 \(declaredCount) 个条目，但只能安全读取 \(entries.count) 个"
-        )
+        CoreStrings.entryCountMismatch(declared: declaredCount, readable: entries.count).localized
       )
     }
 
@@ -88,40 +64,24 @@ public struct EPUBInspector: Sendable {
         add(.error, "unsafe-path", "\(entry.path)：\(error.localizedDescription)")
       }
       if byName[entry.path] != nil {
-        add(
-          .error, "duplicate-entry",
-          EPUBZipLocalization.text(
-            "Duplicate ZIP entry: \(entry.path)", zhHans: "ZIP 条目重复：\(entry.path)"))
+        add(.error, "duplicate-entry", CoreStrings.duplicateEntry(entry.path).localized)
       } else {
         byName[entry.path] = entry
       }
       let folded = entry.path.folding(
         options: [.caseInsensitive], locale: Locale(identifier: "en_US_POSIX"))
       if let previous = foldedNames[folded], previous != entry.path {
-        add(
-          .error, "case-collision",
-          EPUBZipLocalization.text(
-            "\(previous) and \(entry.path) collide on the default macOS file system",
-            zhHans: "\(previous) 与 \(entry.path) 在默认 macOS 文件系统上冲突"
-          ))
+        add(.error, "case-collision", CoreStrings.caseCollision(previous, entry.path).localized)
       } else {
         foldedNames[folded] = entry.path
       }
       if entry.type == .symlink {
-        add(
-          .error, "symlink",
-          EPUBZipLocalization.text(
-            "Symbolic-link entries are not allowed: \(entry.path)",
-            zhHans: "不允许符号链接条目：\(entry.path)"
-          ))
+        add(.error, "symlink", CoreStrings.symlinkEntry(entry.path).localized)
       }
     }
 
     guard let mimetype = byName["mimetype"] else {
-      add(
-        .error, "mimetype-missing",
-        EPUBZipLocalization.text(
-          "The root folder is missing mimetype", zhHans: "根目录缺少 mimetype"))
+      add(.error, "mimetype-missing", CoreStrings.missingMimetype.localized)
       return InspectionReport(
         path: url.path,
         entryCount: entries.count,
@@ -130,30 +90,19 @@ public struct EPUBInspector: Sendable {
       )
     }
     if mimetype.type != .file || mimetype.isCompressed {
-      add(
-        .error, "mimetype-compression",
-        EPUBZipLocalization.text(
-          "mimetype must be a regular uncompressed file", zhHans: "mimetype 必须是不压缩的普通文件"))
+      add(.error, "mimetype-compression", CoreStrings.mimetypeRegularFile.localized)
     }
     do {
       let data = try read(mimetype, from: archive, maximumBytes: 128)
       if String(data: data, encoding: .ascii) != Self.mediaType {
-        add(
-          .error, "mimetype-content",
-          EPUBZipLocalization.text(
-            "mimetype must contain exactly \(Self.mediaType), with no newline",
-            zhHans: "mimetype 内容必须精确为 \(Self.mediaType)，且不能换行"
-          ))
+        add(.error, "mimetype-content", CoreStrings.invalidMimetype(Self.mediaType).localized)
       }
     } catch {
       add(.error, "mimetype-read", error.localizedDescription)
     }
 
     guard let container = byName["META-INF/container.xml"] else {
-      add(
-        .error, "container-missing",
-        EPUBZipLocalization.text(
-          "META-INF/container.xml is missing", zhHans: "缺少 META-INF/container.xml"))
+      add(.error, "container-missing", CoreStrings.missingContainer.localized)
       return InspectionReport(
         path: url.path,
         entryCount: entries.count,
@@ -166,51 +115,32 @@ public struct EPUBInspector: Sendable {
       let parsed = try ContainerXML.parse(data)
       rootfiles = parsed.map(\.fullPath)
       if parsed.isEmpty {
-        add(
-          .error, "rootfile-missing",
-          EPUBZipLocalization.text(
-            "container.xml does not declare an OPF rootfile",
-            zhHans: "container.xml 没有声明 OPF rootfile"
-          ))
+        add(.error, "rootfile-missing", CoreStrings.missingRootfileDeclaration.localized)
       }
       for rootfile in parsed {
         do {
           try SafeArchivePath.validate(rootfile.fullPath)
         } catch {
-          add(
-            .error, "rootfile-path",
-            EPUBZipLocalization.text(
-              "Unsafe rootfile path: \(rootfile.fullPath)",
-              zhHans: "rootfile 路径不安全：\(rootfile.fullPath)"
-            ))
+          add(.error, "rootfile-path", CoreStrings.unsafeRootfile(rootfile.fullPath).localized)
           continue
         }
         if byName[rootfile.fullPath] == nil {
           add(
             .error, "rootfile-not-found",
-            EPUBZipLocalization.text(
-              "The rootfile declared by container.xml was not found: \(rootfile.fullPath)",
-              zhHans: "找不到 container.xml 声明的 \(rootfile.fullPath)"
-            ))
+            CoreStrings.missingDeclaredRootfile(rootfile.fullPath).localized)
         }
         if !rootfile.mediaType.isEmpty,
           rootfile.mediaType != "application/oebps-package+xml"
         {
           add(
             .warning, "rootfile-media-type",
-            EPUBZipLocalization.text(
-              "\(rootfile.fullPath) uses a non-standard media-type",
-              zhHans: "\(rootfile.fullPath) 使用了非标准 media-type"
-            ))
+            CoreStrings.nonstandardRootfileMediaType(rootfile.fullPath).localized)
         }
       }
     } catch {
       add(
         .error, "container-xml",
-        EPUBZipLocalization.text(
-          "Could not parse container.xml: \(error.localizedDescription)",
-          zhHans: "container.xml 无法解析：\(error.localizedDescription)"
-        ))
+        CoreStrings.parseContainerFailed(error.localizedDescription).localized)
     }
 
     return InspectionReport(
@@ -223,22 +153,12 @@ public struct EPUBInspector: Sendable {
 
   private func read(_ entry: Entry, from archive: Archive, maximumBytes: Int) throws -> Data {
     guard entry.uncompressedSize <= UInt64(maximumBytes) else {
-      throw EPUBZipError.invalidEPUB(
-        EPUBZipLocalization.text(
-          "\(entry.path) exceeds the inspection size limit",
-          zhHans: "\(entry.path) 超过检查大小限制"
-        )
-      )
+      throw EPUBZipError.invalidEPUB(CoreStrings.inspectionSizeLimit(entry.path).localized)
     }
     var result = Data()
     _ = try archive.extract(entry) { chunk in
       guard result.count + chunk.count <= maximumBytes else {
-        throw EPUBZipError.invalidEPUB(
-          EPUBZipLocalization.text(
-            "\(entry.path) exceeds the inspection size limit",
-            zhHans: "\(entry.path) 超过检查大小限制"
-          )
-        )
+        throw EPUBZipError.invalidEPUB(CoreStrings.inspectionSizeLimit(entry.path).localized)
       }
       result.append(chunk)
     }
@@ -257,18 +177,10 @@ private enum ZIPStructure {
     let handle = try FileHandle(forReadingFrom: url)
     defer { try? handle.close() }
     guard let header = try handle.read(upToCount: 30), header.count == 30 else {
-      throw EPUBZipError.invalidEPUB(
-        EPUBZipLocalization.text(
-          "The ZIP local header is incomplete", zhHans: "ZIP 本地头不完整")
-      )
+      throw EPUBZipError.invalidEPUB(CoreStrings.incompleteZIPHeader.localized)
     }
     guard header.littleEndianUInt32(at: 0) == 0x0403_4B50 else {
-      throw EPUBZipError.invalidEPUB(
-        EPUBZipLocalization.text(
-          "The file does not begin with a ZIP local header",
-          zhHans: "文件没有以 ZIP 本地头开始"
-        )
-      )
+      throw EPUBZipError.invalidEPUB(CoreStrings.missingZIPHeader.localized)
     }
     let method = header.littleEndianUInt16(at: 8)
     let nameLength = Int(header.littleEndianUInt16(at: 26))
@@ -276,10 +188,7 @@ private enum ZIPStructure {
     guard let nameData = try handle.read(upToCount: nameLength), nameData.count == nameLength,
       let name = String(data: nameData, encoding: .utf8)
     else {
-      throw EPUBZipError.invalidEPUB(
-        EPUBZipLocalization.text(
-          "The first ZIP entry name is invalid", zhHans: "首个 ZIP 条目名称无效")
-      )
+      throw EPUBZipError.invalidEPUB(CoreStrings.invalidFirstEntryName.localized)
     }
     return LocalHeader(name: name, compressionMethod: method, extraFieldLength: extraLength)
   }
@@ -332,8 +241,7 @@ private final class ContainerXML: NSObject, XMLParserDelegate {
     parser.delegate = delegate
     guard parser.parse() else {
       throw delegate.parseError ?? parser.parserError
-        ?? EPUBZipError.invalidEPUB(
-          EPUBZipLocalization.text("Unknown XML error", zhHans: "未知 XML 错误"))
+        ?? EPUBZipError.invalidEPUB(CoreStrings.unknownXMLError.localized)
     }
     return delegate.rootfiles
   }

@@ -7,6 +7,34 @@ import ZIPFoundation
 @Suite(.serialized)
 struct EPUBServiceTests {
   @Test
+  func localizationDetectionAndResolution() {
+    #expect(
+      EPUBZipLocalization.detectLanguage(
+        override: "en", preferredLanguages: ["zh-Hans"]
+      ) == .english
+    )
+    #expect(
+      EPUBZipLocalization.detectLanguage(
+        override: "zh-CN", preferredLanguages: ["en-US"]
+      ) == .simplifiedChinese
+    )
+    #expect(
+      EPUBZipLocalization.detectLanguage(
+        override: nil, preferredLanguages: ["ja-JP", "zh-Hans"]
+      ) == .simplifiedChinese
+    )
+    #expect(
+      EPUBZipLocalization.detectLanguage(
+        override: "unsupported", preferredLanguages: []
+      ) == .english
+    )
+
+    let message = CoreStrings.outputExtension
+    #expect(message.resolved(for: .english).contains(".epub extension"))
+    #expect(message.resolved(for: .simplifiedChinese).contains(".epub 扩展名"))
+  }
+
+  @Test
   func packInspectAndUnpackRoundTrip() throws {
     let source = try validSource()
     let root = try temporaryDirectory()

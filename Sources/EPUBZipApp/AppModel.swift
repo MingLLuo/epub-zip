@@ -22,11 +22,8 @@ final class AppModel: ObservableObject {
 
   func chooseItems() {
     let panel = NSOpenPanel()
-    panel.message = appText(
-      "Choose an EPUB file or a folder containing EPUB source files",
-      zhHans: "选择 EPUB 文件或包含 EPUB 源文件的目录"
-    )
-    panel.prompt = appText("Process", zhHans: "处理")
+    panel.message = AppStrings.openPanelMessage.localized
+    panel.prompt = AppStrings.process.localized
     panel.canChooseFiles = true
     panel.canChooseDirectories = true
     panel.allowsMultipleSelection = true
@@ -41,7 +38,7 @@ final class AppModel: ObservableObject {
     state = .working(
       urls.count == 1
         ? urls[0].lastPathComponent
-        : appText("\(urls.count) items", zhHans: "正在处理 \(urls.count) 个项目")
+        : AppStrings.itemCount(urls.count).localized
     )
     Task {
       do {

@@ -26,7 +26,7 @@ struct ContentView: View {
     VStack(spacing: 6) {
       Text("EPUB Zip")
         .font(.system(size: 28, weight: .semibold, design: .rounded))
-      Text(appText("Folder to EPUB · EPUB to folder · Validation", zhHans: "目录打包 · EPUB 解包 · 自动检查"))
+      Text(AppStrings.subtitle.localized)
         .foregroundStyle(.secondary)
     }
   }
@@ -103,17 +103,13 @@ struct ContentView: View {
   private var stateTitle: some View {
     switch model.state {
     case .idle:
-      Text(appText("Drop an EPUB or source folder", zhHans: "拖入 EPUB 或源目录"))
+      Text(AppStrings.dropPrompt.localized)
     case .working(let name):
-      Text(appText("Processing \(name)", zhHans: "正在处理 \(name)"))
+      Text(AppStrings.processing(name).localized)
     case .success(let result):
-      Text(
-        result.kind == .pack
-          ? appText("EPUB created", zhHans: "EPUB 已创建")
-          : appText("EPUB extracted", zhHans: "EPUB 已解包")
-      )
+      Text((result.kind == .pack ? AppStrings.epubCreated : AppStrings.epubExtracted).localized)
     case .failure:
-      Text(appText("Could not complete", zhHans: "没有完成"))
+      Text(AppStrings.failed.localized)
     }
   }
 
@@ -121,19 +117,9 @@ struct ContentView: View {
   private var stateDetail: some View {
     switch model.state {
     case .idle:
-      Text(
-        appText(
-          "Drop a folder to create an EPUB, or drop an .epub to create an editable folder. Existing results are never overwritten.",
-          zhHans: "拖入目录会生成 EPUB；拖入 .epub 会生成可编辑目录。已有同名结果不会被覆盖。"
-        )
-      )
+      Text(AppStrings.idleDetail.localized)
     case .working:
-      Text(
-        appText(
-          "Validating the structure and writing safely to a temporary location…",
-          zhHans: "正在检查结构并安全写入临时位置…"
-        )
-      )
+      Text(AppStrings.workingDetail.localized)
     case .success(let result):
       Text(result.outputURL.path)
         .textSelection(.enabled)
@@ -147,22 +133,22 @@ struct ContentView: View {
   private var actionButtons: some View {
     switch model.state {
     case .idle:
-      Button(appText("Choose File or Folder…", zhHans: "选择文件或目录…")) {
+      Button(AppStrings.choose.localized) {
         model.chooseItems()
       }
       .buttonStyle(.borderedProminent)
       .controlSize(.large)
     case .success:
       HStack {
-        Button(appText("Show in Finder", zhHans: "在 Finder 中显示")) { model.revealResult() }
+        Button(AppStrings.showInFinder.localized) { model.revealResult() }
           .buttonStyle(.borderedProminent)
-        Button(appText("Process Another", zhHans: "继续处理")) { model.reset() }
+        Button(AppStrings.processAnother.localized) { model.reset() }
       }
     case .failure:
       HStack {
-        Button(appText("Choose Again…", zhHans: "重新选择…")) { model.chooseItems() }
+        Button(AppStrings.chooseAgain.localized) { model.chooseItems() }
           .buttonStyle(.borderedProminent)
-        Button(appText("Back", zhHans: "返回")) { model.reset() }
+        Button(AppStrings.back.localized) { model.reset() }
       }
     case .working:
       EmptyView()
@@ -171,9 +157,9 @@ struct ContentView: View {
 
   private var footer: some View {
     HStack {
-      Label(appText("Native Apple Silicon", zhHans: "Apple Silicon 原生"), systemImage: "cpu")
+      Label(AppStrings.nativeAppleSilicon.localized, systemImage: "cpu")
       Spacer()
-      Text(appText("Input files are never modified", zhHans: "不会修改输入文件"))
+      Text(AppStrings.inputUnmodified.localized)
     }
     .font(.caption)
     .foregroundStyle(.secondary)

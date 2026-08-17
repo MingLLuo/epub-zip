@@ -58,7 +58,7 @@ enum EPUBZipCLI {
       to: output.map(fileURL),
       conflictPolicy: force ? .replace : .fail
     )
-    print(localized("Created \(result.outputURL.path)", "已创建 \(result.outputURL.path)"))
+    print(CLIStrings.created(result.outputURL.path).localized)
   }
 
   private static func unpack(_ arguments: [String]) throws {
@@ -77,7 +77,7 @@ enum EPUBZipCLI {
       to: destination,
       conflictPolicy: force ? .replace : .fail
     )
-    print(localized("Extracted \(result.outputURL.path)", "已解包 \(result.outputURL.path)"))
+    print(CLIStrings.extracted(result.outputURL.path).localized)
   }
 
   private static func check(_ arguments: [String]) throws -> Int {
@@ -91,14 +91,10 @@ enum EPUBZipCLI {
       FileHandle.standardOutput.write(try encoder.encode(report))
       write("\n", to: .standardOutput)
     } else {
-      let status =
-        report.isValid ? localized("Valid", "有效") : localized("Invalid", "无效")
+      let status = (report.isValid ? CLIStrings.valid : CLIStrings.invalid).localized
       print(
-        localized(
-          "\(status): \(report.path) (\(report.entryCount) entries)",
-          "\(status)：\(report.path)（\(report.entryCount) 个条目）"
-        )
-      )
+        CLIStrings.reportSummary(status: status, path: report.path, entryCount: report.entryCount)
+          .localized)
       for issue in report.issues {
         print("- \(issue.severity.rawValue) [\(issue.code)]: \(issue.message)")
       }
@@ -123,8 +119,8 @@ enum EPUBZipCLI {
       )
       print(
         result.kind == .pack
-          ? localized("Created \(result.outputURL.path)", "已创建 \(result.outputURL.path)")
-          : localized("Extracted \(result.outputURL.path)", "已解包 \(result.outputURL.path)")
+          ? CLIStrings.created(result.outputURL.path).localized
+          : CLIStrings.extracted(result.outputURL.path).localized
       )
     }
   }
@@ -138,35 +134,7 @@ enum EPUBZipCLI {
   }
 
   private static func printUsage(to handle: FileHandle) {
-    let english = """
-      epubzip — Native EPUB packing, extraction, and container validation
-
-      Usage:
-        epubzip pack [-o output.epub] [--force] <directory>
-        epubzip unpack [-o directory] [--package] [--force] <book.epub>
-        epubzip check [--json] <book.epub>
-        epubzip auto [--package] [--force] <path>...
-        epubzip <path>...
-
-      Without a subcommand, folders are packed and .epub files are extracted.
-      """
-    let chinese = """
-      epubzip — 原生 EPUB 打包、解包与容器检查工具
-
-      用法：
-        epubzip pack [-o output.epub] [--force] <directory>
-        epubzip unpack [-o directory] [--package] [--force] <book.epub>
-        epubzip check [--json] <book.epub>
-        epubzip auto [--package] [--force] <path>...
-        epubzip <path>...
-
-      未指定子命令时，目录会被打包，.epub 文件会被解包。
-      """
-    write(localized(english, chinese) + "\n", to: handle)
-  }
-
-  private static func localized(_ english: String, _ chinese: String) -> String {
-    EPUBZipLocalization.text(english, zhHans: chinese)
+    write(CLIStrings.usage.localized + "\n", to: handle)
   }
 
   private static func write(_ string: String, to handle: FileHandle) {
@@ -191,10 +159,7 @@ private struct Options {
     for name in names {
       guard let index = arguments.firstIndex(of: name) else { continue }
       guard arguments.indices.contains(index + 1) else {
-        throw EPUBZipError.operationFailed(
-          EPUBZipLocalization.text(
-            "\(name) requires a value", zhHans: "\(name) 缺少参数")
-        )
+        throw EPUBZipError.operationFailed(CLIStrings.missingOptionValue(name).localized)
       }
       arguments.remove(at: index)
       return arguments.remove(at: index)

@@ -96,21 +96,15 @@ public enum EPUBZipError: LocalizedError, Sendable {
   public var errorDescription: String? {
     switch self {
     case .invalidEPUB(let message):
-      EPUBZipLocalization.text("Invalid EPUB: \(message)", zhHans: "EPUB 无效：\(message)")
+      CoreStrings.invalidEPUB(message).localized
     case .unsupportedInput(let url):
-      EPUBZipLocalization.text(
-        "Choose an EPUB file or EPUB source folder: \(url.lastPathComponent)",
-        zhHans: "请选择 EPUB 文件或 EPUB 源目录：\(url.lastPathComponent)"
-      )
+      CoreStrings.unsupportedInput(url.lastPathComponent).localized
     case .outputExists(let url):
-      EPUBZipLocalization.text(
-        "Output already exists: \(url.path)", zhHans: "输出已存在：\(url.path)")
+      CoreStrings.outputExists(url.path).localized
     case .unsafePath(let path):
-      EPUBZipLocalization.text(
-        "The archive contains an unsafe path: \(path)", zhHans: "压缩包包含不安全路径：\(path)")
+      CoreStrings.unsafeArchivePath(path).localized
     case .extractionLimit(let message):
-      EPUBZipLocalization.text(
-        "Extraction stopped: \(message)", zhHans: "解包已停止：\(message)")
+      CoreStrings.extractionStopped(message).localized
     case .operationFailed(let message):
       message
     }
