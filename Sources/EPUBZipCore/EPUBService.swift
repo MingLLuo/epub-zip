@@ -46,13 +46,12 @@ public struct EPUBService: Sendable {
     guard requested.pathExtension.caseInsensitiveCompare("epub") == .orderedSame else {
       throw EPUBZipError.operationFailed(CoreStrings.outputExtension.localized)
     }
-    guard !requested.isContained(in: source) else {
-      throw EPUBZipError.operationFailed(CoreStrings.outputInsideSource.localized)
-    }
-
     let files = try collectFiles(in: source)
-    try validateSourceDirectory(source, files: files)
+    try validateSourceDirectory(files)
     let output = try resolvedOutputURL(requested, policy: conflictPolicy)
+    guard !output.isSameOrContained(in: source) else {
+      throw EPUBZipError.operationFailed(CoreStrings.outputOverlapsInput.localized)
+    }
     let temporary = try temporaryFile(beside: output, suffix: ".epub")
     var committed = false
     defer {
@@ -89,15 +88,18 @@ public struct EPUBService: Sendable {
     conflictPolicy: ConflictPolicy = .fail,
     limits: ExtractionLimits = .default
   ) throws -> OperationResult {
-    try validate(limits)
+    try limits.validate()
     let source = sourceURL.standardizedFileURL
-    let report = try inspector.inspect(source)
+    let report = try inspector.inspect(source, limits: limits)
     guard report.isValid else {
       throw EPUBZipError.invalidEPUB(report.errorSummary)
     }
     let requested = (requestedOutputURL ?? defaultUnpackedURL(for: source, packageDirectory: false))
       .standardizedFileURL
     let output = try resolvedOutputURL(requested, policy: conflictPolicy)
+    guard !source.isSameOrContained(in: output) else {
+      throw EPUBZipError.operationFailed(CoreStrings.outputOverlapsInput.localized)
+    }
     let temporary = try temporaryDirectory(beside: output)
     var committed = false
     defer {
@@ -110,7 +112,16 @@ public struct EPUBService: Sendable {
     } catch {
       throw EPUBZipError.invalidEPUB(error.localizedDescription)
     }
-    let entries = Array(archive)
+    var entries: [Entry] = []
+    entries.reserveCapacity(min(report.entryCount, limits.maximumEntries))
+    for entry in archive {
+      guard entries.count < limits.maximumEntries else {
+        throw EPUBZipError.extractionLimit(
+          CoreStrings.entryLimit(limits.maximumEntries).localized
+        )
+      }
+      entries.append(entry)
+    }
     try preflight(entries, limits: limits)
     var extractedTotal: UInt64 = 0
     for entry in entries {
@@ -141,13 +152,20 @@ public struct EPUBService: Sendable {
         var fileBytes: UInt64 = 0
         do {
           _ = try archive.extract(entry) { chunk in
-            fileBytes += UInt64(chunk.count)
-            extractedTotal += UInt64(chunk.count)
-            guard fileBytes <= limits.maximumFileSize,
-              extractedTotal <= limits.maximumTotalSize
+            let (nextFileBytes, fileOverflow) = fileBytes.addingReportingOverflow(
+              UInt64(chunk.count)
+            )
+            let (nextTotal, totalOverflow) = extractedTotal.addingReportingOverflow(
+              UInt64(chunk.count)
+            )
+            guard !fileOverflow, !totalOverflow,
+              nextFileBytes <= limits.maximumFileSize,
+              nextTotal <= limits.maximumTotalSize
             else {
               throw EPUBZipError.extractionLimit(CoreStrings.actualSizeLimit.localized)
             }
+            fileBytes = nextFileBytes
+            extractedTotal = nextTotal
             try handle.write(contentsOf: chunk)
           }
           try handle.close()
@@ -162,14 +180,17 @@ public struct EPUBService: Sendable {
     }
 
     let extractedFiles = try collectFiles(in: temporary)
-    try validateSourceDirectory(temporary, files: extractedFiles)
+    try validateSourceDirectory(extractedFiles)
     try commit(temporary: temporary, to: output, replacing: conflictPolicy == .replace)
     committed = true
     return OperationResult(kind: .unpack, inputURL: source, outputURL: output, report: report)
   }
 
-  public func inspect(_ epubURL: URL) throws -> InspectionReport {
-    try inspector.inspect(epubURL)
+  public func inspect(
+    _ epubURL: URL,
+    limits: ExtractionLimits = .default
+  ) throws -> InspectionReport {
+    try inspector.inspect(epubURL, limits: limits)
   }
 
   public func defaultPackedURL(for directory: URL) -> URL {
@@ -209,12 +230,16 @@ extension EPUBService {
       .isRegularFileKey, .isDirectoryKey, .isSymbolicLinkKey, .fileSizeKey,
     ]
     let resolvedRoot = root.resolvingSymlinksInPath().standardizedFileURL
+    var enumerationFailure: (url: URL, error: Error)?
     guard
       let enumerator = fileManager.enumerator(
         at: root,
         includingPropertiesForKeys: keys,
         options: [],
-        errorHandler: { _, _ in false }
+        errorHandler: { url, error in
+          enumerationFailure = (url, error)
+          return false
+        }
       )
     else {
       throw EPUBZipError.operationFailed(CoreStrings.readSourceFailed(root.path).localized)
@@ -245,63 +270,66 @@ extension EPUBService {
       try SafeArchivePath.validate(relative)
       files.append(.init(url: item, path: relative, size: Int64(values.fileSize ?? 0)))
     }
+    if let enumerationFailure {
+      throw EPUBZipError.operationFailed(
+        CoreStrings.readSourceItemFailed(
+          enumerationFailure.url.path,
+          enumerationFailure.error.localizedDescription
+        ).localized
+      )
+    }
     return files
   }
 
-  fileprivate func validateSourceDirectory(_ root: URL, files: [SourceFile]) throws {
-    let names = Set(files.map(\.path))
-    guard names.contains("mimetype") else {
+  fileprivate func validateSourceDirectory(_ files: [SourceFile]) throws {
+    var byName: [String: SourceFile] = [:]
+    var pathRegistry = ArchivePathRegistry()
+    for file in files {
+      do {
+        try pathRegistry.insert(path: file.path, isDirectory: false)
+      } catch let problem as ArchivePathProblem {
+        throw EPUBZipError.invalidEPUB(problem.localizedDescription)
+      }
+      guard byName[file.path] == nil else {
+        throw EPUBZipError.invalidEPUB(CoreStrings.duplicateEntry(file.path).localized)
+      }
+      byName[file.path] = file
+    }
+    guard let mimetypeFile = byName["mimetype"] else {
       throw EPUBZipError.invalidEPUB(CoreStrings.missingMimetype.localized)
     }
-    let mimetype = root.appendingPathComponent("mimetype")
-    guard try Data(contentsOf: mimetype) == Data(EPUBInspector.mediaType.utf8) else {
+    let expectedMimetype = Data(EPUBInspector.mediaType.utf8)
+    guard mimetypeFile.size == expectedMimetype.count,
+      try Data(contentsOf: mimetypeFile.url) == expectedMimetype
+    else {
       throw EPUBZipError.invalidEPUB(
         CoreStrings.invalidMimetype(EPUBInspector.mediaType).localized)
     }
-    let containerURL = root.appendingPathComponent("META-INF/container.xml")
-    guard names.contains("META-INF/container.xml") else {
+    guard let containerFile = byName["META-INF/container.xml"] else {
       throw EPUBZipError.invalidEPUB(CoreStrings.missingContainer.localized)
     }
-    let rootfiles = try sourceRootfiles(from: Data(contentsOf: containerURL))
-    guard !rootfiles.isEmpty else {
-      throw EPUBZipError.invalidEPUB(CoreStrings.missingRootfileDeclaration.localized)
-    }
-    for rootfile in rootfiles {
-      try SafeArchivePath.validate(rootfile)
-      guard names.contains(rootfile) else {
-        throw EPUBZipError.invalidEPUB(CoreStrings.missingDeclaredRootfile(rootfile).localized)
-      }
-    }
-  }
-
-  fileprivate func sourceRootfiles(from data: Data) throws -> [String] {
-    final class Delegate: NSObject, XMLParserDelegate {
-      var paths: [String] = []
-      var error: Error?
-
-      func parser(
-        _: XMLParser,
-        didStartElement elementName: String,
-        namespaceURI _: String?,
-        qualifiedName _: String?,
-        attributes attributeDict: [String: String] = [:]
-      ) {
-        if elementName == "rootfile", let path = attributeDict["full-path"] { paths.append(path) }
-      }
-
-      func parser(_: XMLParser, parseErrorOccurred parseError: Error) { error = parseError }
-    }
-    let delegate = Delegate()
-    let parser = XMLParser(data: data)
-    parser.shouldProcessNamespaces = true
-    parser.delegate = delegate
-    guard parser.parse() else {
+    let maximumContainerBytes = 4 * 1_024 * 1_024
+    guard containerFile.size <= maximumContainerBytes else {
       throw EPUBZipError.invalidEPUB(
-        delegate.error?.localizedDescription
-          ?? CoreStrings.invalidContainerXML.localized
+        CoreStrings.inspectionSizeLimit(containerFile.path).localized
       )
     }
-    return delegate.paths
+    let rootfiles: [OCFRootfile]
+    do {
+      rootfiles = try OCFContainer.parse(Data(contentsOf: containerFile.url))
+    } catch {
+      throw EPUBZipError.invalidEPUB(
+        CoreStrings.parseContainerFailed(error.localizedDescription).localized
+      )
+    }
+    for rootfile in rootfiles {
+      try SafeArchivePath.validate(rootfile.fullPath)
+      guard byName[rootfile.fullPath] != nil else {
+        throw EPUBZipError.invalidEPUB(
+          CoreStrings.missingDeclaredRootfile(rootfile.fullPath).localized
+        )
+      }
+    }
   }
 
   fileprivate func add(_ file: SourceFile, to archive: Archive, stored: Bool) throws {
@@ -325,20 +353,16 @@ extension EPUBService {
       throw EPUBZipError.extractionLimit(CoreStrings.entryLimit(limits.maximumEntries).localized)
     }
     var total: UInt64 = 0
-    var names = Set<String>()
-    var foldedNames = Set<String>()
+    var pathRegistry = ArchivePathRegistry()
     for entry in entries {
-      try SafeArchivePath.validate(entry.path)
-      guard names.insert(entry.path).inserted else {
-        throw EPUBZipError.invalidEPUB(CoreStrings.duplicateEntry(entry.path).localized)
-      }
-      let folded = entry.path.folding(
-        options: [.caseInsensitive], locale: Locale(identifier: "en_US_POSIX"))
-      guard foldedNames.insert(folded).inserted else {
-        throw EPUBZipError.invalidEPUB(CoreStrings.caseInsensitiveCollision.localized)
-      }
+      try SafeArchivePath.validate(entry.path, limits: limits)
       guard entry.type != .symlink else {
         throw EPUBZipError.unsafePath(entry.path)
+      }
+      do {
+        try pathRegistry.insert(entry)
+      } catch let problem as ArchivePathProblem {
+        throw EPUBZipError.invalidEPUB(problem.localizedDescription)
       }
       guard entry.uncompressedSize <= limits.maximumFileSize else {
         throw EPUBZipError.extractionLimit(CoreStrings.fileSizeLimit(entry.path).localized)
@@ -353,21 +377,15 @@ extension EPUBService {
           throw EPUBZipError.extractionLimit(
             CoreStrings.invalidCompressedSize(entry.path).localized)
         }
-        if entry.uncompressedSize / entry.compressedSize > limits.maximumCompressionRatio {
+        let quotient = entry.uncompressedSize / entry.compressedSize
+        let remainder = entry.uncompressedSize % entry.compressedSize
+        if quotient > limits.maximumCompressionRatio
+          || (quotient == limits.maximumCompressionRatio && remainder > 0)
+        {
           throw EPUBZipError.extractionLimit(
             CoreStrings.compressionRatioLimit(entry.path).localized)
         }
       }
-    }
-  }
-
-  fileprivate func validate(_ limits: ExtractionLimits) throws {
-    guard limits.maximumEntries > 0,
-      limits.maximumFileSize > 0,
-      limits.maximumTotalSize > 0,
-      limits.maximumCompressionRatio > 0
-    else {
-      throw EPUBZipError.operationFailed(CoreStrings.invalidLimits.localized)
     }
   }
 
@@ -423,13 +441,22 @@ extension EPUBService {
     try fileManager.moveItem(at: output, to: backup)
     do {
       try fileManager.moveItem(at: temporary, to: output)
-      try fileManager.removeItem(at: backup)
     } catch {
       if !fileManager.fileExists(atPath: output.path) {
-        try? fileManager.moveItem(at: backup, to: output)
+        do {
+          try fileManager.moveItem(at: backup, to: output)
+        } catch let restorationError {
+          throw EPUBZipError.operationFailed(
+            CoreStrings.restoreOutputFailed(
+              backup.path,
+              restorationError.localizedDescription
+            ).localized
+          )
+        }
       }
       throw error
     }
+    try? fileManager.removeItem(at: backup)
   }
 }
 
@@ -438,6 +465,12 @@ extension URL {
     let root = directory.canonicalizedForContainment.pathComponents
     let candidate = canonicalizedForContainment.pathComponents
     return candidate.count > root.count && Array(candidate.prefix(root.count)) == root
+  }
+
+  fileprivate func isSameOrContained(in directory: URL) -> Bool {
+    let root = directory.canonicalizedForContainment.pathComponents
+    let candidate = canonicalizedForContainment.pathComponents
+    return candidate.count >= root.count && Array(candidate.prefix(root.count)) == root
   }
 
   /// Resolves aliases in the nearest existing ancestor, then restores any non-existing suffix.

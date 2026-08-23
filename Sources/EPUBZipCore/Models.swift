@@ -9,17 +9,23 @@ public struct ExtractionLimits: Sendable, Equatable {
   public var maximumFileSize: UInt64
   public var maximumTotalSize: UInt64
   public var maximumCompressionRatio: UInt64
+  public var maximumPathBytes: Int
+  public var maximumPathComponentBytes: Int
 
   public init(
     maximumEntries: Int = 20_000,
     maximumFileSize: UInt64 = 512 * 1_024 * 1_024,
     maximumTotalSize: UInt64 = 2 * 1_024 * 1_024 * 1_024,
-    maximumCompressionRatio: UInt64 = 1_000
+    maximumCompressionRatio: UInt64 = 1_000,
+    maximumPathBytes: Int = 4_096,
+    maximumPathComponentBytes: Int = 255
   ) {
     self.maximumEntries = maximumEntries
     self.maximumFileSize = maximumFileSize
     self.maximumTotalSize = maximumTotalSize
     self.maximumCompressionRatio = maximumCompressionRatio
+    self.maximumPathBytes = maximumPathBytes
+    self.maximumPathComponentBytes = maximumPathComponentBytes
   }
 
   public static let `default` = ExtractionLimits()
@@ -107,6 +113,21 @@ public enum EPUBZipError: LocalizedError, Sendable {
       CoreStrings.extractionStopped(message).localized
     case .operationFailed(let message):
       message
+    }
+  }
+}
+
+extension ExtractionLimits {
+  func validate() throws {
+    guard maximumEntries > 0,
+      maximumFileSize > 0,
+      maximumTotalSize > 0,
+      maximumCompressionRatio > 0,
+      maximumPathBytes > 0,
+      maximumPathComponentBytes > 0,
+      maximumPathComponentBytes <= maximumPathBytes
+    else {
+      throw EPUBZipError.operationFailed(CoreStrings.invalidLimits.localized)
     }
   }
 }

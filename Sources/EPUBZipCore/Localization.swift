@@ -43,8 +43,8 @@ public enum EPUBZipLocalization {
     override: String?,
     preferredLanguages: [String]
   ) -> EPUBZipLanguage {
-    if let overrideLanguage = language(for: override) {
-      return overrideLanguage
+    if let override {
+      return language(for: override) ?? .english
     }
     return preferredLanguages.lazy.compactMap(language(for:)).first ?? .english
   }
@@ -53,7 +53,16 @@ public enum EPUBZipLocalization {
     guard let identifier else { return nil }
     let languageCode = Locale.Language(identifier: identifier).languageCode?.identifier
     switch languageCode {
-    case "zh": return .simplifiedChinese
+    case "zh":
+      let components = identifier.replacingOccurrences(of: "_", with: "-")
+        .lowercased()
+        .split(separator: "-")
+      let isTraditional =
+        components.contains("hant")
+        || components.contains("tw")
+        || components.contains("hk")
+        || components.contains("mo")
+      return isTraditional ? nil : .simplifiedChinese
     case "en": return .english
     default: return nil
     }

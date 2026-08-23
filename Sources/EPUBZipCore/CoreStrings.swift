@@ -28,9 +28,9 @@ enum CoreStrings {
     "The output file must use the .epub extension",
     "输出文件必须使用 .epub 扩展名"
   )
-  static let outputInsideSource = localized(
-    "The output cannot be inside the source folder being packed",
-    "输出不能位于要打包的源目录内"
+  static let outputOverlapsInput = localized(
+    "The output cannot replace or contain the input",
+    "输出不能替换或包含输入"
   )
   static func createEPUBFailed(_ reason: String) -> LocalizedMessage {
     localized("Could not create EPUB: \(reason)", "创建 EPUB 失败：\(reason)")
@@ -50,6 +50,12 @@ enum CoreStrings {
   }
   static func readSourceFailed(_ path: String) -> LocalizedMessage {
     localized("Could not read source folder: \(path)", "无法读取源目录：\(path)")
+  }
+  static func readSourceItemFailed(_ path: String, _ reason: String) -> LocalizedMessage {
+    localized(
+      "Could not read \(path): \(reason)",
+      "无法读取 \(path)：\(reason)"
+    )
   }
   static func sourceContainsSymlink(_ path: String) -> LocalizedMessage {
     localized(
@@ -95,6 +101,43 @@ enum CoreStrings {
     "container.xml could not be parsed",
     "container.xml 无法解析"
   )
+  static let invalidContainerRoot = localized(
+    "container.xml must have an OCF container root element",
+    "container.xml 必须以 OCF container 元素为根节点"
+  )
+  static let invalidContainerVersion = localized(
+    "The OCF container version must be 1.0",
+    "OCF container 版本必须为 1.0"
+  )
+  static let invalidContainerStructure = localized(
+    "container.xml must contain exactly one rootfiles element in the OCF namespace",
+    "container.xml 必须在 OCF 命名空间中包含且仅包含一个 rootfiles 元素"
+  )
+  static func invalidContainerElement(_ name: String) -> LocalizedMessage {
+    localized(
+      "Unexpected OCF element in container.xml: \(name)",
+      "container.xml 中存在意外的 OCF 元素：\(name)"
+    )
+  }
+  static func invalidRootfileDeclaration(_ detail: String) -> LocalizedMessage {
+    localized("Invalid rootfile declaration: \(detail)", "rootfile 声明无效：\(detail)")
+  }
+  static func invalidRootfileMediaType(_ path: String) -> LocalizedMessage {
+    localized(
+      "\(path) must use media-type application/oebps-package+xml",
+      "\(path) 的 media-type 必须为 application/oebps-package+xml"
+    )
+  }
+  static func rootfileNotRegularFile(_ path: String) -> LocalizedMessage {
+    localized(
+      "The declared rootfile is not a regular file: \(path)",
+      "声明的 rootfile 不是普通文件：\(path)"
+    )
+  }
+  static let containerNotRegularFile = localized(
+    "META-INF/container.xml must be a regular file",
+    "META-INF/container.xml 必须是普通文件"
+  )
 
   static func entryLimit(_ maximum: Int) -> LocalizedMessage {
     localized("Entry count exceeds \(maximum)", "条目数超过 \(maximum)")
@@ -102,10 +145,24 @@ enum CoreStrings {
   static func duplicateEntry(_ path: String) -> LocalizedMessage {
     localized("Duplicate ZIP entry: \(path)", "ZIP 条目重复：\(path)")
   }
-  static let caseInsensitiveCollision = localized(
-    "ZIP entries have a case-insensitive collision on the default macOS file system",
-    "ZIP 条目在默认 macOS 文件系统上发生大小写冲突"
-  )
+  static func pathTopologyCollision(_ first: String, _ second: String) -> LocalizedMessage {
+    localized(
+      "ZIP entry paths conflict as a file and directory: \(first), \(second)",
+      "ZIP 条目发生文件与目录路径冲突：\(first)、\(second)"
+    )
+  }
+  static func archivePathTooLong(_ path: String, maximum: Int) -> LocalizedMessage {
+    localized(
+      "The ZIP path exceeds \(maximum) UTF-8 bytes: \(path)",
+      "ZIP 路径超过 \(maximum) 个 UTF-8 字节：\(path)"
+    )
+  }
+  static func archivePathComponentTooLong(_ path: String, maximum: Int) -> LocalizedMessage {
+    localized(
+      "A ZIP path component exceeds \(maximum) UTF-8 bytes: \(path)",
+      "ZIP 路径组件超过 \(maximum) 个 UTF-8 字节：\(path)"
+    )
+  }
   static func fileSizeLimit(_ path: String) -> LocalizedMessage {
     localized("\(path) exceeds the per-file size limit", "\(path) 超过单文件大小限制")
   }
@@ -131,6 +188,12 @@ enum CoreStrings {
     "Could not create a temporary file",
     "无法创建临时文件"
   )
+  static func restoreOutputFailed(_ backup: String, _ reason: String) -> LocalizedMessage {
+    localized(
+      "Could not restore the previous output. Its backup remains at \(backup): \(reason)",
+      "无法恢复原输出；备份仍保留在 \(backup)：\(reason)"
+    )
+  }
 
   static func readZIPFailed(_ reason: String) -> LocalizedMessage {
     localized("Could not read ZIP container: \(reason)", "无法读取 ZIP 容器：\(reason)")
@@ -166,6 +229,9 @@ enum CoreStrings {
       "\(first) 与 \(second) 在默认 macOS 文件系统上冲突"
     )
   }
+  static func unsafePathDetail(_ path: String, _ reason: String) -> LocalizedMessage {
+    localized("\(path): \(reason)", "\(path)：\(reason)")
+  }
   static func symlinkEntry(_ path: String) -> LocalizedMessage {
     localized("Symbolic-link entries are not allowed: \(path)", "不允许符号链接条目：\(path)")
   }
@@ -175,9 +241,6 @@ enum CoreStrings {
   )
   static func unsafeRootfile(_ path: String) -> LocalizedMessage {
     localized("Unsafe rootfile path: \(path)", "rootfile 路径不安全：\(path)")
-  }
-  static func nonstandardRootfileMediaType(_ path: String) -> LocalizedMessage {
-    localized("\(path) uses a non-standard media-type", "\(path) 使用了非标准 media-type")
   }
   static func parseContainerFailed(_ reason: String) -> LocalizedMessage {
     localized("Could not parse container.xml: \(reason)", "container.xml 无法解析：\(reason)")
@@ -197,7 +260,6 @@ enum CoreStrings {
     "The first ZIP entry name is invalid",
     "首个 ZIP 条目名称无效"
   )
-  static let unknownXMLError = localized("Unknown XML error", "未知 XML 错误")
 
   private static func localized(
     _ english: String,
