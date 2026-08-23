@@ -2,12 +2,17 @@
 
 - Status: Accepted
 - Date: 2026-08-17
+- Amended: 2026-08-23 by [ADR 0003](0003-maturity-and-release-gates.md) for batch behavior and
+  production release gates
 
 ## Context
 
-The original ePub Zip-Unzip 64 3.0 is an Intel AppleScript droplet that delegates to shell tools. The replacement should preserve its direct drag-and-drop experience while prioritizing Apple Silicon, safe path handling, and maintainable open-source code.
+The original ePub Zip-Unzip 64 3.0 is an Intel AppleScript droplet that delegates to shell tools.
+The replacement should preserve its direct drag-and-drop experience while prioritizing Apple
+Silicon, safe path handling, and maintainable open-source code.
 
-The initial Go prototype proved the EPUB container rules and security model, but a command-line-first cross-platform product does not provide the best native macOS experience.
+The initial Go prototype proved the EPUB container rules and security model, but a
+command-line-first cross-platform product does not provide the best native macOS experience.
 
 ## Prior-art review
 
@@ -29,7 +34,10 @@ Use a single Swift package with three products:
 2. `epubzip`, a small CLI for automation and tests;
 3. `EPUB Zip`, a SwiftUI macOS application with one drop zone and no document-library UI.
 
-Use ZIPFoundation 0.9.20 or newer within the 0.9 series for ZIP primitives. Keep all EPUB-specific checks in `EPUBZipCore`. Do not shell out to `zip`, `unzip`, Finder, or AppleScript.
+Use ZIPFoundation for ZIP primitives, with 0.9.20 as the reviewed version locked by
+`Package.resolved`. A future compatible-version update remains a distinct reviewed dependency
+change. Keep all EPUB-specific checks in `EPUBZipCore`. Do not shell out to `zip`, `unzip`,
+Finder, or AppleScript.
 
 The release build targets `arm64` first. A universal build remains an optional release artifact, not the architectural baseline.
 
@@ -39,12 +47,16 @@ The main window answers one question: “What did the user drop?”
 
 - Drop a directory: create a sibling `.epub`.
 - Drop an `.epub`: create a sibling directory.
-- Show progress, the latest result, and a button to reveal it in Finder.
+- Show progress, retain the full batch summary, and reveal all successful results in Finder.
 - Put advanced output and safety controls in Settings, not in the main path.
+
+ADR 0003 clarifies that accepted input can join an active sequential queue, one item failure does
+not stop later work, and no accepted result may be silently discarded.
 
 ## Validation boundary
 
-The built-in checker covers ZIP/OCF structure needed for safe pack/unpack. Full semantic publication validation remains an optional EPUBCheck integration later.
+The built-in checker covers ZIP/OCF structure needed for safe pack/unpack. Full semantic
+publication validation remains an optional EPUBCheck integration later.
 
 ## Consequences
 

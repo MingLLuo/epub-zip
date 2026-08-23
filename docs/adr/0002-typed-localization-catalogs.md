@@ -23,6 +23,10 @@ Use a small shared localization value type and one typed catalog per responsibil
 Call sites select a named message and request `.localized`; they do not contain translated
 literals. Language detection accepts explicit inputs for deterministic unit tests.
 
+English is the fallback language and Simplified Chinese is the other supported language.
+Traditional Chinese preferences and any unsupported/invalid override resolve to English rather
+than being treated as Simplified Chinese.
+
 ## Why not String Catalog resources yet
 
 The project is a Swift Package with a manually assembled `.app` bundle and a standalone CLI. A

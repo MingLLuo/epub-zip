@@ -19,14 +19,31 @@ upstream open-source projects evaluated for EPUB Zip.
 
 ## Runtime dependencies and platform APIs
 
-- [ZIPFoundation](https://github.com/weichsel/ZIPFoundation): MIT-licensed Swift ZIP library built
-  on Apple's `libcompression`; EPUB Zip pins the compatible 0.9 series in `Package.resolved`.
+- [ZIPFoundation 0.9.20 release](https://github.com/weichsel/ZIPFoundation/releases/tag/0.9.20):
+  the exact reviewed MIT-licensed Swift ZIP release locked by `Package.resolved`.
+- [ZIPFoundation source](https://github.com/weichsel/ZIPFoundation): streaming ZIP library built on
+  Apple's `libcompression`; it supplies archive mechanics, not EPUB policy.
 - [Apple Compression framework](https://developer.apple.com/documentation/compression): native
   compression primitives used by ZIPFoundation on Apple platforms.
 - [SwiftUI `dropDestination`](https://developer.apple.com/documentation/swiftui/view/dropdestination(for:action:istargeted:)):
   native typed drag-and-drop API used by the main window.
 - [Swift Package Manager](https://www.swift.org/documentation/package-manager/): dependency and
   product definition used by the repository.
+
+## macOS distribution, privacy, and CI
+
+- [Developer ID](https://developer.apple.com/developer-id/): Apple's identity mechanism for
+  distributing Mac software outside the Mac App Store.
+- [Configuring the Hardened Runtime](https://developer.apple.com/documentation/xcode/configuring-the-hardened-runtime/):
+  runtime protection required for the production signing path.
+- [Notarizing macOS software before distribution](https://developer.apple.com/documentation/security/notarizing-macos-software-before-distribution):
+  Apple submission, ticket, and distribution guidance.
+- [Privacy manifest files](https://developer.apple.com/documentation/bundleresources/privacy-manifest-files):
+  the `PrivacyInfo.xcprivacy` bundle-resource format.
+- [Required-reason APIs](https://developer.apple.com/documentation/bundleresources/describing-use-of-required-reason-api):
+  reasons recorded for APIs such as preferences storage.
+- [GitHub-hosted runner reference](https://docs.github.com/en/actions/how-tos/write-workflows/choose-where-workflows-run/choose-the-runner-for-a-job):
+  documents available macOS labels and the Apple Silicon runner architecture used by CI.
 
 ## Validation companion
 
@@ -54,8 +71,14 @@ architectural decision is recorded in
 | Requirement or decision | Implementation |
 |---|---|
 | First, exact, uncompressed `mimetype` with no local-header extra field | `EPUBService.add`, `EPUBInspector`, `ZIPStructure` |
-| `META-INF/container.xml` and OPF rootfiles | `ContainerXML`, `sourceRootfiles` |
+| Strict `META-INF/container.xml` and OPF rootfiles | `OCFContainer`, `EPUBInspector`, `EPUBService.validateSourceDirectory` |
 | Store and Deflate only | `EPUBService.add` |
-| Safe archive paths and collision rejection | `SafeArchivePath`, `EPUBService.preflight` |
-| Native drag/drop | `ContentView.dropDestination` |
+| Safe paths, byte limits, and topology/collision rejection | `SafeArchivePath`, `ArchivePathRegistry`, `EPUBService.preflight` |
+| Input/output overlap protection | `EPUBService.pack`, `EPUBService.unpack`, URL containment helpers |
+| Native drag/drop and complete batch results | `ContentView.dropDestination`, `AppModel` |
+| No tracking/data collection and required-reason declaration | `Resources/PrivacyInfo.xcprivacy` |
+| Local versus production trust gate | `Scripts/build-app.sh`, `Scripts/notarize.sh`, `docs/releasing.md` |
 | Full-publication validation remains external | `docs/design-rationale.md`, README validation note |
+
+Implementation names in this table describe the current 0.4 architecture. When a refactor renames a
+component, update this map in the same commit so normative claims remain traceable.

@@ -58,6 +58,10 @@ The repository can automate all production preparation, but it cannot manufactur
 Apple Developer identity or notarization credentials. A build without those credentials must remain
 clearly described as ad-hoc signed.
 
+The executable checklist and credential boundary are maintained in
+[`docs/releasing.md`](../releasing.md); vulnerability support and residual risk are maintained in
+[`SECURITY.md`](../../SECURITY.md).
+
 ## Consequences
 
 - Core validation becomes stricter and may reject containers that older versions accepted even

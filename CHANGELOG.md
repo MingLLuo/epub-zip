@@ -2,6 +2,29 @@
 
 All notable changes to EPUB Zip are documented here.
 
+## 0.4.0 — 2026-08-23
+
+- Prevented every operation, including `--force`, from replacing its own input or selecting an
+  output whose containment relationship could destroy the input.
+- Bounded archive entry iteration before materializing the complete central directory; added
+  limits for total path bytes and path-component bytes.
+- Added shared path-topology validation to reject file/directory ancestor conflicts in inspection
+  and extraction.
+- Replaced duplicate `container.xml` parsing with one strict OCF parser that validates the
+  namespace, hierarchy, version, rootfile path, and OPF media type.
+- Reworked the SwiftUI app around a persistent batch queue that records all successes, warnings,
+  and failures, continues after an item error, and reveals all successful outputs.
+- Made the window resizable, preserved full diagnostics, and added explicit accessibility labels
+  while hiding decorative status imagery.
+- Corrected language fallback so Traditional Chinese and every other unsupported locale use
+  English instead of Simplified Chinese.
+- Added an application icon, a privacy manifest declaring no tracking or collected data, GUI state
+  tests, and additional security regression coverage.
+- Added version/artifact verification, explicit Apple Silicon packaging checks, license notices,
+  and a documented production gate for Developer ID signing, Hardened Runtime, notarization,
+  stapling, and Gatekeeper assessment.
+- Updated the minimum toolchain to Xcode 16 and kept ZIPFoundation pinned to 0.9.20.
+
 ## 0.3.0 — 2026-08-17
 
 - Centralized English and Simplified Chinese text in typed core, app, and CLI catalogs.
