@@ -10,15 +10,37 @@ permissions:
 jobs:
   native-macos:
     runs-on: macos-15
+    env:
+      SCRATCH_PATH: /private/tmp/epubzip-ci-build-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
-      - uses: actions/checkout@v4
-      - name: Check formatting
-        run: swift format lint -r Package.swift Sources Tests
-      - name: Test
-        run: swift test
-      - name: Build Apple Silicon app executable
-        run: swift build -c release --arch arm64 --product EPUBZipApp
-      - name: Verify architecture
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - name: Verify project metadata and formatting
+        run: make verify
+      - name: Verify dependency lock
         run: |
-          bin_dir=$(swift build -c release --arch arm64 --show-bin-path)
-          file "$bin_dir/EPUBZipApp" | grep arm64
+          make resolve
+          git diff --exit-code -- Package.resolved
+      - name: Run tests
+        run: make test
+      - name: Build and check example EPUB
+        run: make example
+      - name: Build arm64 CLI package
+        run: make build
+      - name: Build arm64 app packages
+        run: make app
+      - name: Verify packaged artifacts
+        run: make verify-artifacts
+      - name: Generate and verify checksums
+        run: |
+          make checksums
+          make verify-checksums
+      - name: Upload development artifacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: epub-zip-${{ github.sha }}-development
+          path: |
+            dist/*.zip
+            dist/*.dmg
+            dist/*.epub
+            dist/SHA256SUMS
+          if-no-files-found: error

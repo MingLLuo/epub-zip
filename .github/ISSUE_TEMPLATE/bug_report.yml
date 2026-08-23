@@ -1,0 +1,73 @@
+name: Bug report
+description: Report reproducible incorrect behavior or a crash
+title: "[Bug]: "
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve EPUB Zip. Do not attach copyrighted books or files containing private information; use a minimal reproduction when possible.
+  - type: input
+    id: version
+    attributes:
+      label: EPUB Zip version
+      description: Run `epubzip --version`, or use the version shown in the app bundle.
+      placeholder: 0.4.0
+    validations:
+      required: true
+  - type: input
+    id: macos
+    attributes:
+      label: macOS and hardware
+      description: Include the macOS version and Mac model or processor.
+      placeholder: macOS 15.6, MacBook Air (M3)
+    validations:
+      required: true
+  - type: dropdown
+    id: interface
+    attributes:
+      label: Interface
+      options:
+        - macOS app
+        - Command-line tool
+        - Both
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Give the smallest repeatable sequence, including the command when applicable.
+      placeholder: |
+        1. Create or obtain a minimal EPUB fixture.
+        2. Run ...
+        3. Observe ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior and diagnostics
+      description: Paste complete error text. Remove personal paths or sensitive metadata first.
+    validations:
+      required: true
+  - type: textarea
+    id: fixture
+    attributes:
+      label: Minimal fixture details
+      description: Describe the archive layout and whether the issue reproduces with Examples/MinimalBook. Attach only content you may legally share.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Pre-submission checks
+      options:
+        - label: I searched existing issues for the same problem.
+          required: true
+        - label: I removed private or copyrighted content from the report and attachments.
+          required: true

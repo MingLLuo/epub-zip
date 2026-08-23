@@ -1,0 +1,53 @@
+name: Feature request
+description: Propose a focused improvement to EPUB Zip
+title: "[Feature]: "
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please describe the user problem first. EPUB Zip intentionally focuses on safe EPUB packaging, extraction, and structural checks rather than ebook conversion or editing.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What workflow is difficult today, and who encounters it?
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Desired outcome
+      description: Describe observable behavior without prescribing an implementation when possible.
+    validations:
+      required: true
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Primary surface
+      options:
+        - Shared core behavior
+        - macOS app
+        - Command-line tool
+        - Build, release, or documentation
+    validations:
+      required: true
+  - type: textarea
+    id: examples
+    attributes:
+      label: Example workflow
+      description: Show a short before-and-after example or proposed command/UI flow.
+  - type: textarea
+    id: tradeoffs
+    attributes:
+      label: Alternatives and tradeoffs
+      description: Note workarounds, compatibility concerns, or safety implications you have considered.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Pre-submission checks
+      options:
+        - label: I searched existing issues and documentation for this request.
+          required: true
+        - label: This request is about EPUB packaging, extraction, validation, or project maintenance.
+          required: true

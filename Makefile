@@ -1,34 +1,29 @@
-.PHONY: resolve build app example test format lint clean
+.PHONY: resolve verify verify-project build app example test format lint \
+	verify-artifacts checksums verify-checksums notarize clean
 
-SCRATCH_PATH ?= /private/tmp/epubzip-build-$(shell id -u)
-VERSION := $(shell tr -d '[:space:]' < VERSION)
-SWIFT_ENV = CLANG_MODULE_CACHE_PATH=$(SCRATCH_PATH)/clang-module-cache SWIFTPM_MODULECACHE_OVERRIDE=$(SCRATCH_PATH)/swift-module-cache
-SWIFT_PATHS = --disable-sandbox --scratch-path $(SCRATCH_PATH) --cache-path $(SCRATCH_PATH)/package-cache --config-path $(SCRATCH_PATH)/config --security-path $(SCRATCH_PATH)/security
+CHECKOUT_ID := $(shell pwd -P | tr -d '\n' | shasum -a 256 | cut -c 1-12)
+SCRATCH_PATH ?= /private/tmp/epubzip-build-$(shell id -u)-$(CHECKOUT_ID)
+SWIFT_ENV = CLANG_MODULE_CACHE_PATH="$(SCRATCH_PATH)/clang-module-cache" SWIFTPM_MODULECACHE_OVERRIDE="$(SCRATCH_PATH)/swift-module-cache"
+SWIFT_PATHS = --disable-sandbox --scratch-path "$(SCRATCH_PATH)" --cache-path "$(SCRATCH_PATH)/package-cache" --config-path "$(SCRATCH_PATH)/config" --security-path "$(SCRATCH_PATH)/security"
 
-resolve:
+resolve: verify-project
 	$(SWIFT_ENV) swift package $(SWIFT_PATHS) resolve
 
-build:
-	$(SWIFT_ENV) swift build $(SWIFT_PATHS) -c release --product epubzip
-	@bin_dir=$$($(SWIFT_ENV) swift build $(SWIFT_PATHS) -c release --show-bin-path); \
-		stage="$(SCRATCH_PATH)/epubzip-$(VERSION)-arm64"; \
-		test "$$($$bin_dir/epubzip --version)" = "epubzip $(VERSION)"; \
-		rm -rf "$$stage"; \
-		mkdir -p "$$stage" dist; \
-		cp "$$bin_dir/epubzip" "$$stage/epubzip"; \
-		cp Resources/CLI-README.txt "$$stage/README.txt"; \
-		chmod 755 "$$stage/epubzip"; \
-		rm -f "dist/epubzip-$(VERSION)-arm64-cli.zip"; \
-		ditto -c -k --norsrc --noextattr --noqtn --noacl --keepParent "$$stage" "dist/epubzip-$(VERSION)-arm64-cli.zip"; \
-		echo "$(CURDIR)/dist/epubzip-$(VERSION)-arm64-cli.zip"
+verify: verify-project lint
 
-app:
-	SCRATCH_PATH=$(SCRATCH_PATH) ARCHS="$(ARCHS)" ./Scripts/build-app.sh
+verify-project:
+	./Scripts/verify-project.sh
 
-example:
+build: verify-project
+	SCRATCH_PATH="$(SCRATCH_PATH)" ./Scripts/build-cli.sh
+
+app: verify-project
+	SCRATCH_PATH="$(SCRATCH_PATH)" ARCHS="$(ARCHS)" ./Scripts/build-app.sh
+
+example: verify-project
 	mkdir -p dist
-	$(SWIFT_ENV) swift run $(SWIFT_PATHS) epubzip pack --force -o "$(CURDIR)/dist/MinimalBook.epub" "$(CURDIR)/Examples/MinimalBook"
-	$(SWIFT_ENV) swift run $(SWIFT_PATHS) epubzip check "$(CURDIR)/dist/MinimalBook.epub"
+	$(SWIFT_ENV) swift run $(SWIFT_PATHS) --arch arm64 epubzip pack --force -o "$(CURDIR)/dist/MinimalBook.epub" "$(CURDIR)/Examples/MinimalBook"
+	$(SWIFT_ENV) swift run $(SWIFT_PATHS) --arch arm64 epubzip check "$(CURDIR)/dist/MinimalBook.epub"
 
 test:
 	$(SWIFT_ENV) swift test $(SWIFT_PATHS)
@@ -39,5 +34,18 @@ format:
 lint:
 	swift format lint -r Package.swift Sources Tests
 
+verify-artifacts:
+	./Scripts/verify-artifacts.sh
+
+checksums:
+	./Scripts/create-checksums.sh "$(CURDIR)/dist"
+
+verify-checksums:
+	cd dist && shasum -a 256 -c SHA256SUMS
+
+notarize:
+	@test -n "$(DMG)" || { echo 'Usage: make notarize DMG=dist/<signed-not-notarized.dmg>' >&2; exit 64; }
+	./Scripts/notarize.sh "$(DMG)"
+
 clean:
-	rm -rf $(SCRATCH_PATH) dist
+	./Scripts/clean.sh "$(SCRATCH_PATH)"
