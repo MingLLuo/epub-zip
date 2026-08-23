@@ -10,10 +10,29 @@ scratch_dir=$("$project_dir/Scripts/validate-scratch-path.sh" "$scratch_dir")
 output_dir="$project_dir/dist"
 signing_identity=${CODESIGN_IDENTITY:--}
 
+if git -C "$project_dir" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  source_commit=$(git -C "$project_dir" rev-parse --verify HEAD)
+  if [[ -n "$(git -C "$project_dir" status --porcelain --untracked-files=normal)" ]]; then
+    source_state=dirty
+  else
+    source_state=clean
+  fi
+elif [[ -s "$project_dir/SOURCE-COMMIT" ]]; then
+  source_commit=$(tr -d '[:space:]' < "$project_dir/SOURCE-COMMIT")
+  source_state=source-archive
+else
+  source_commit=unknown
+  source_state=untracked
+fi
+
 if [[ "$signing_identity" == "-" ]]; then
   artifact_label=development
   build_notice="Development artifact: ad-hoc signed and not notarized. Do not publish it as an official release."
 else
+  [[ "$source_state" == clean ]] || {
+    print -u2 -- "Developer ID candidates must be built from a clean Git worktree."
+    exit 65
+  }
   artifact_label=signed-not-notarized
   build_notice="Distribution candidate: Developer ID signed with hardened runtime, but not yet notarized."
 fi
@@ -61,6 +80,8 @@ cp "$binary" "$stage/epubzip"
 cp "$project_dir/Resources/CLI-README.txt" "$stage/README.txt"
 cp "$project_dir/LICENSE" "$stage/LICENSE"
 cp "$project_dir/THIRD_PARTY_NOTICES.md" "$stage/THIRD_PARTY_NOTICES.md"
+print -r -- "$source_commit" > "$stage/SOURCE-COMMIT"
+print -r -- "$source_state" > "$stage/SOURCE-STATE"
 print -r -- "$build_notice" > "$stage/BUILD-NOTICE.txt"
 chmod 755 "$stage/epubzip"
 

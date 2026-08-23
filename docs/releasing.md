@@ -74,6 +74,7 @@ confirm:
 - bundle and CLI versions equal `VERSION`;
 - `Info.plist`, `AppIcon.icns`, and `PrivacyInfo.xcprivacy` are present and readable;
 - app and CLI packages contain `LICENSE` and `THIRD_PARTY_NOTICES.md`;
+- app and CLI packages record the clean build commit in `SOURCE-COMMIT` and `SOURCE-STATE`;
 - the packaged CLI reports the expected `epubzip <version>`;
 - the source archive contains the exact clean `HEAD` and records it in `SOURCE-COMMIT`;
 - the example EPUB has first, stored, extra-field-free `mimetype` and passes `epubzip check`.
@@ -101,7 +102,8 @@ CODESIGN_IDENTITY="Developer ID Application: Publisher Name (TEAMID)" make verif
 ```
 
 When a non-ad-hoc identity is supplied, the release build must enable Hardened Runtime and a secure
-timestamp. Verify the application extracted from the distribution before notarization:
+timestamp. The scripts reject a Developer ID build from a dirty worktree. Verify the application
+extracted from the distribution before notarization:
 
 ```bash
 codesign --verify --deep --strict --verbose=2 "EPUB Zip.app"
@@ -193,6 +195,7 @@ signing workflow is configured.
 - [ ] App icon and privacy manifest are packaged.
 - [ ] App and CLI packages contain both license files.
 - [ ] Source ZIP version and `SOURCE-COMMIT` match the release tag commit.
+- [ ] App/CLI `SOURCE-COMMIT` match the tag and both `SOURCE-STATE` files say `clean`.
 - [ ] Architectures match the artifact names.
 - [ ] No Finder metadata, caches, credentials, or unrelated directories are included.
 - [ ] Production app is Developer ID signed with Hardened Runtime and timestamp.

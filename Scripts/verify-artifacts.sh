@@ -49,14 +49,24 @@ source_dir="$work_dir/source/EPUB-Zip-$version"
 }
 
 for packaged_file in "$cli_dir/LICENSE" "$cli_dir/THIRD_PARTY_NOTICES.md" "$cli_dir/BUILD-NOTICE.txt" \
+  "$cli_dir/SOURCE-COMMIT" "$cli_dir/SOURCE-STATE" \
   "$app/Contents/Resources/LICENSE" "$app/Contents/Resources/THIRD_PARTY_NOTICES.md" \
   "$app/Contents/Resources/BUILD-NOTICE.txt" "$app/Contents/Resources/AppIcon.icns" \
-  "$app/Contents/Resources/PrivacyInfo.xcprivacy"; do
+  "$app/Contents/Resources/PrivacyInfo.xcprivacy" "$app/Contents/Resources/SOURCE-COMMIT" \
+  "$app/Contents/Resources/SOURCE-STATE"; do
   [[ -s "$packaged_file" ]] || {
     print -u2 -- "Packaged resource is missing: $packaged_file"
     exit 1
   }
 done
+
+expected_commit=$(git -C "$project_dir" rev-parse HEAD)
+[[ "$(tr -d '[:space:]' < "$cli_dir/SOURCE-COMMIT")" == "$expected_commit" \
+  && "$(tr -d '[:space:]' < "$app/Contents/Resources/SOURCE-COMMIT")" == "$expected_commit" ]] \
+  || { print -u2 -- "A binary artifact does not match HEAD."; exit 1; }
+[[ "$(tr -d '[:space:]' < "$cli_dir/SOURCE-STATE")" == clean \
+  && "$(tr -d '[:space:]' < "$app/Contents/Resources/SOURCE-STATE")" == clean ]] \
+  || { print -u2 -- "Release verification requires binaries built from a clean worktree."; exit 1; }
 
 [[ "$(plutil -extract CFBundleShortVersionString raw "$app/Contents/Info.plist")" == "$version" ]] \
   || { print -u2 -- "Packaged app version is inconsistent."; exit 1; }

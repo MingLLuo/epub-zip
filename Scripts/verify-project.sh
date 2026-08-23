@@ -16,8 +16,8 @@ for required_file in VERSION Package.swift Package.resolved Sources/EPUBZipCore/
 done
 
 version=$(tr -d '[:space:]' < VERSION)
-print -r -- "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+([-.][0-9A-Za-z.-]+)?$' \
-  || fail "VERSION is not semantic-version shaped: $version"
+print -r -- "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' \
+  || fail "VERSION must contain three numeric components: $version"
 
 source_version_count=$(grep -c 'public static let current = "' Sources/EPUBZipCore/Models.swift)
 [[ "$source_version_count" == 1 ]] || fail "expected one EPUBZipCoreVersion.current declaration"
