@@ -31,5 +31,6 @@ trap 'rm -f -- "$temporary_file"' EXIT
   done
 ) > "$temporary_file"
 mv -f -- "$temporary_file" "$checksum_file"
+chmod 644 "$checksum_file"
 trap - EXIT
 print -r -- "$checksum_file"
