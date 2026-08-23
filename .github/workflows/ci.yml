@@ -28,6 +28,8 @@ jobs:
         run: make build
       - name: Build arm64 app packages
         run: make app
+      - name: Build traceable source package
+        run: make source
       - name: Verify packaged artifacts
         run: make verify-artifacts
       - name: Generate and verify checksums

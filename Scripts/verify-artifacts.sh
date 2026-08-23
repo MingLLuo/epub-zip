@@ -14,9 +14,10 @@ fi
 cli_archive="$artifact_dir/epubzip-$version-arm64-cli-$artifact_label.zip"
 app_archive="$artifact_dir/EPUB Zip-$version-arm64-$artifact_label.zip"
 app_dmg="$artifact_dir/EPUB Zip-$version-arm64-$artifact_label.dmg"
+source_archive="$artifact_dir/EPUB-Zip-$version-source.zip"
 example="$artifact_dir/MinimalBook.epub"
 
-for artifact in "$cli_archive" "$app_archive" "$app_dmg" "$example"; do
+for artifact in "$cli_archive" "$app_archive" "$app_dmg" "$source_archive" "$example"; do
   [[ -s "$artifact" ]] || {
     print -u2 -- "Missing or empty artifact: $artifact"
     exit 1
@@ -27,10 +28,12 @@ work_dir=$(mktemp -d "${TMPDIR:-/tmp}/epubzip-artifact-verification.XXXXXX")
 trap 'rm -rf -- "$work_dir"' EXIT
 ditto -x -k "$cli_archive" "$work_dir/cli"
 ditto -x -k "$app_archive" "$work_dir/app"
+ditto -x -k "$source_archive" "$work_dir/source"
 
 cli_dir="$work_dir/cli/epubzip-$version-arm64-cli-$artifact_label"
 cli="$cli_dir/epubzip"
 app="$work_dir/app/EPUB Zip.app"
+source_dir="$work_dir/source/EPUB-Zip-$version"
 
 [[ "$(lipo -archs "$cli")" == arm64 ]] || {
   print -u2 -- "Packaged CLI is not arm64-only."
@@ -83,4 +86,18 @@ first_entry=$(zipinfo -1 "$example" | sed -n '1p')
 }
 "$cli" check "$example" >/dev/null
 
-print -- "Verified arm64 app, CLI, DMG, licenses, privacy manifest, and example EPUB for $version."
+[[ -d "$source_dir" && ! -e "$source_dir/.git" ]] || {
+  print -u2 -- "Source archive layout is invalid."
+  exit 1
+}
+[[ "$(tr -d '[:space:]' < "$source_dir/VERSION")" == "$version" ]] || {
+  print -u2 -- "Source archive version is inconsistent."
+  exit 1
+}
+[[ "$(tr -d '[:space:]' < "$source_dir/SOURCE-COMMIT")" == "$(git -C "$project_dir" rev-parse HEAD)" ]] || {
+  print -u2 -- "Source archive commit does not match HEAD."
+  exit 1
+}
+"$source_dir/Scripts/verify-project.sh" >/dev/null
+
+print -- "Verified arm64 app, CLI, DMG, source, licenses, privacy manifest, and example EPUB for $version."

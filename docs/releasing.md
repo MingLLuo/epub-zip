@@ -53,6 +53,7 @@ commit; a release commit should not conceal unrelated source changes.
 ```bash
 make build
 make app
+make source
 make verify-artifacts
 ```
 
@@ -62,6 +63,7 @@ By default this creates explicit `arm64` artifacts under `dist/`, including:
 EPUB Zip-<version>-arm64-development.dmg
 EPUB Zip-<version>-arm64-development.zip
 epubzip-<version>-arm64-cli-development.zip
+EPUB-Zip-<version>-source.zip
 MinimalBook.epub
 ```
 
@@ -73,7 +75,11 @@ confirm:
 - `Info.plist`, `AppIcon.icns`, and `PrivacyInfo.xcprivacy` are present and readable;
 - app and CLI packages contain `LICENSE` and `THIRD_PARTY_NOTICES.md`;
 - the packaged CLI reports the expected `epubzip <version>`;
+- the source archive contains the exact clean `HEAD` and records it in `SOURCE-COMMIT`;
 - the example EPUB has first, stored, extra-field-free `mimetype` and passes `epubzip check`.
+
+`make source` intentionally refuses a dirty worktree. Build it only after every release change is
+committed; ignored files under `dist/` do not make the checkout dirty.
 
 An optional universal app is built explicitly:
 
@@ -186,6 +192,7 @@ signing workflow is configured.
 - [ ] Dependency lock and third-party notice name ZIPFoundation 0.9.20.
 - [ ] App icon and privacy manifest are packaged.
 - [ ] App and CLI packages contain both license files.
+- [ ] Source ZIP version and `SOURCE-COMMIT` match the release tag commit.
 - [ ] Architectures match the artifact names.
 - [ ] No Finder metadata, caches, credentials, or unrelated directories are included.
 - [ ] Production app is Developer ID signed with Hardened Runtime and timestamp.

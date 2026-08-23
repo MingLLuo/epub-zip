@@ -1,4 +1,4 @@
-.PHONY: resolve verify verify-project build app example test format lint \
+.PHONY: resolve verify verify-project build app source example test format lint \
 	verify-artifacts checksums verify-checksums notarize clean
 
 CHECKOUT_ID := $(shell pwd -P | tr -d '\n' | shasum -a 256 | cut -c 1-12)
@@ -19,6 +19,9 @@ build: verify-project
 
 app: verify-project
 	SCRATCH_PATH="$(SCRATCH_PATH)" ARCHS="$(ARCHS)" ./Scripts/build-app.sh
+
+source: verify-project
+	./Scripts/build-source.sh
 
 example: verify-project
 	mkdir -p dist

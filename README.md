@@ -86,6 +86,7 @@ EPUB 不是任意 ZIP。[W3C EPUB 3.3](https://www.w3.org/TR/epub-33/#sec-zip-co
 make verify
 make test
 make app
+make source
 ```
 
 主要产物：
@@ -93,6 +94,7 @@ make app
 ```text
 dist/EPUB Zip-0.4.0-arm64-development.dmg
 dist/EPUB Zip-0.4.0-arm64-development.zip
+dist/EPUB-Zip-0.4.0-source.zip
 ```
 
 这些本地 `make app` 产物仅为 **ad-hoc 签名的开发版**，适合本机验证，不应作为正式公开下载。
@@ -187,6 +189,7 @@ make example
 make verify
 make build
 make app
+make source
 ```
 
 `make verify` 检查版本一致性、依赖锁定、许可/隐私资源和制品前置条件。CI 使用同一入口，并在

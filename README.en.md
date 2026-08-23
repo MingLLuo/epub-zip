@@ -95,6 +95,7 @@ Xcode 16 or later is required. Apple Silicon is the default target:
 make verify
 make test
 make app
+make source
 ```
 
 Primary outputs:
@@ -102,6 +103,7 @@ Primary outputs:
 ```text
 dist/EPUB Zip-0.4.0-arm64-development.dmg
 dist/EPUB Zip-0.4.0-arm64-development.zip
+dist/EPUB-Zip-0.4.0-source.zip
 ```
 
 These local `make app` artifacts are **ad-hoc-signed development builds** for local verification,
@@ -199,6 +201,7 @@ make example
 make verify
 make build
 make app
+make source
 ```
 
 `make verify` checks version consistency, the dependency lock, license/privacy resources, and

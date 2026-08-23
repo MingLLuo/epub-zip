@@ -23,6 +23,7 @@ All notable changes to EPUB Zip are documented here.
 - Added version/artifact verification, explicit Apple Silicon packaging checks, license notices,
   and a documented production gate for Developer ID signing, Hardened Runtime, notarization,
   stapling, and Gatekeeper assessment.
+- Added a clean-HEAD source archive whose embedded commit ID is checked alongside binary artifacts.
 - Updated the minimum toolchain to Xcode 16 and kept ZIPFoundation pinned to 0.9.20.
 
 ## 0.3.0 — 2026-08-17
