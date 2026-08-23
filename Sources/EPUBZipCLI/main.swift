@@ -23,7 +23,7 @@ enum EPUBZipCLI {
       return 0
     }
     if ["version", "--version"].contains(first) {
-      print("epubzip \(EPUBZipCoreVersion.current)")
+      print(CLIStrings.version(EPUBZipCoreVersion.current))
       return 0
     }
 
@@ -42,7 +42,7 @@ enum EPUBZipCLI {
       }
       return 0
     } catch {
-      write("epubzip: \(error.localizedDescription)\n", to: .standardError)
+      write(CLIStrings.error(error.localizedDescription) + "\n", to: .standardError)
       return 2
     }
   }
@@ -50,8 +50,8 @@ enum EPUBZipCLI {
   private static func pack(_ arguments: [String]) throws {
     var parser = Options(arguments)
     let output = try parser.value(for: ["-o", "--output"])
-    let force = parser.flag("--force")
-    let input = try parser.singlePath(usage: "epubzip pack [-o output.epub] [--force] <directory>")
+    let force = try parser.flag("--force")
+    let input = try parser.singlePath(usage: CLIStrings.packUsage)
     let service = EPUBService()
     let result = try service.pack(
       directory: fileURL(input),
@@ -64,10 +64,9 @@ enum EPUBZipCLI {
   private static func unpack(_ arguments: [String]) throws {
     var parser = Options(arguments)
     let output = try parser.value(for: ["-o", "--output"])
-    let force = parser.flag("--force")
-    let package = parser.flag("--package")
-    let input = try parser.singlePath(
-      usage: "epubzip unpack [-o directory] [--package] [--force] <book.epub>")
+    let force = try parser.flag("--force")
+    let package = try parser.flag("--package")
+    let input = try parser.singlePath(usage: CLIStrings.unpackUsage)
     let service = EPUBService()
     let inputURL = fileURL(input)
     let destination =
@@ -82,8 +81,8 @@ enum EPUBZipCLI {
 
   private static func check(_ arguments: [String]) throws -> Int {
     var parser = Options(arguments)
-    let json = parser.flag("--json")
-    let input = try parser.singlePath(usage: "epubzip check [--json] <book.epub>")
+    let json = try parser.flag("--json")
+    let input = try parser.singlePath(usage: CLIStrings.checkUsage)
     let report = try EPUBService().inspect(fileURL(input))
     if json {
       let encoder = JSONEncoder()
@@ -91,15 +90,18 @@ enum EPUBZipCLI {
       FileHandle.standardOutput.write(try encoder.encode(report))
       write("\n", to: .standardOutput)
     } else {
-      let status = (report.isValid ? CLIStrings.valid : CLIStrings.invalid).localized
       print(
-        CLIStrings.reportSummary(status: status, path: report.path, entryCount: report.entryCount)
-          .localized)
+        CLIStrings.reportSummary(
+          isValid: report.isValid,
+          path: report.path,
+          entryCount: report.entryCount
+        )
+        .localized)
       for issue in report.issues {
-        print("- \(issue.severity.rawValue) [\(issue.code)]: \(issue.message)")
+        print(CLIStrings.inspectionIssue(issue).localized)
       }
       if !report.rootfiles.isEmpty {
-        print("rootfiles: \(report.rootfiles.joined(separator: ", "))")
+        print(CLIStrings.rootfiles(report.rootfiles).localized)
       }
     }
     return report.isValid ? 0 : 1
@@ -107,9 +109,9 @@ enum EPUBZipCLI {
 
   private static func auto(_ arguments: [String]) throws {
     var parser = Options(arguments)
-    let force = parser.flag("--force")
-    let package = parser.flag("--package")
-    let paths = try parser.paths(usage: "epubzip auto [--package] [--force] <path>...")
+    let force = try parser.flag("--force")
+    let package = try parser.flag("--package")
+    let paths = try parser.paths(usage: CLIStrings.autoUsage)
     let service = EPUBService()
     for path in paths {
       let result = try service.process(
@@ -139,45 +141,5 @@ enum EPUBZipCLI {
 
   private static func write(_ string: String, to handle: FileHandle) {
     handle.write(Data(string.utf8))
-  }
-}
-
-private struct Options {
-  private var arguments: [String]
-
-  init(_ arguments: [String]) {
-    self.arguments = arguments
-  }
-
-  mutating func flag(_ name: String) -> Bool {
-    guard let index = arguments.firstIndex(of: name) else { return false }
-    arguments.remove(at: index)
-    return true
-  }
-
-  mutating func value(for names: [String]) throws -> String? {
-    for name in names {
-      guard let index = arguments.firstIndex(of: name) else { continue }
-      guard arguments.indices.contains(index + 1) else {
-        throw EPUBZipError.operationFailed(CLIStrings.missingOptionValue(name).localized)
-      }
-      arguments.remove(at: index)
-      return arguments.remove(at: index)
-    }
-    return nil
-  }
-
-  mutating func singlePath(usage: String) throws -> String {
-    guard arguments.count == 1, let path = arguments.first, !path.hasPrefix("-") else {
-      throw EPUBZipError.operationFailed(usage)
-    }
-    return path
-  }
-
-  mutating func paths(usage: String) throws -> [String] {
-    guard !arguments.isEmpty, !arguments.contains(where: { $0.hasPrefix("-") }) else {
-      throw EPUBZipError.operationFailed(usage)
-    }
-    return arguments
   }
 }

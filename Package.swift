@@ -40,5 +40,9 @@ let package = Package(
       name: "EPUBZipAppTests",
       dependencies: ["EPUBZipApp", "EPUBZipCore"]
     ),
+    .testTarget(
+      name: "EPUBZipCLITests",
+      dependencies: ["EPUBZipCLI", "EPUBZipCore"]
+    ),
   ]
 )
