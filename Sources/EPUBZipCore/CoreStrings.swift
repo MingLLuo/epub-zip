@@ -29,8 +29,8 @@ enum CoreStrings {
     "输出文件必须使用 .epub 扩展名"
   )
   static let outputOverlapsInput = localized(
-    "The output cannot replace or contain the input",
-    "输出不能替换或包含输入"
+    "The input and output locations must not overlap",
+    "输入与输出位置不能相互重叠"
   )
   static func createEPUBFailed(_ reason: String) -> LocalizedMessage {
     localized("Could not create EPUB: \(reason)", "创建 EPUB 失败：\(reason)")
